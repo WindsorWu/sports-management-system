@@ -1,0 +1,97 @@
+from django.db import models
+from django.conf import settings
+
+
+class Carousel(models.Model):
+    """轮播图模型"""
+    POSITION_CHOICES = (
+        ('home', '首页'),
+        ('event', '赛事页'),
+        ('announcement', '公告页'),
+    )
+    
+    title = models.CharField(
+        max_length=200,
+        verbose_name='标题'
+    )
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='描述'
+    )
+    image = models.ImageField(
+        upload_to='carousel/%Y/%m/',
+        verbose_name='轮播图片'
+    )
+    link_url = models.URLField(
+        blank=True,
+        null=True,
+        verbose_name='链接地址',
+        help_text='点击轮播图跳转的URL'
+    )
+    event = models.ForeignKey(
+        'events.Event',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='carousels',
+        verbose_name='关联赛事'
+    )
+    position = models.CharField(
+        max_length=20,
+        choices=POSITION_CHOICES,
+        default='home',
+        verbose_name='展示位置'
+    )
+    order = models.IntegerField(
+        default=0,
+        verbose_name='排序',
+        help_text='数字越小越靠前'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='是否启用'
+    )
+    start_time = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='开始时间',
+        help_text='定时展示的开始时间'
+    )
+    end_time = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='结束时间',
+        help_text='定时展示的结束时间'
+    )
+    click_count = models.IntegerField(
+        default=0,
+        verbose_name='点击次数'
+    )
+    creator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='carousels',
+        verbose_name='创建者'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='创建时间'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='更新时间'
+    )
+    
+    class Meta:
+        db_table = 'carousel'
+        verbose_name = '轮播图'
+        verbose_name_plural = verbose_name
+        ordering = ['order', '-created_at']
+        indexes = [
+            models.Index(fields=['position', 'is_active', 'order']),
+            models.Index(fields=['is_active']),
+        ]
+    
+    def __str__(self):
+        return self.title
