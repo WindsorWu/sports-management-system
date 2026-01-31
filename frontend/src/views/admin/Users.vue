@@ -35,8 +35,10 @@
           @change="handleSearch"
         >
           <el-option label="全部" value="" />
+          <el-option label="管理员" value="admin" />
           <el-option label="运动员" value="athlete" />
           <el-option label="组织者" value="organizer" />
+          <el-option label="裁判" value="referee" />
         </el-select>
       </div>
 
@@ -51,27 +53,33 @@
         <el-table-column prop="username" label="用户名" width="150" />
         <el-table-column label="姓名" width="120">
           <template #default="{ row }">
-            {{ row.profile?.real_name || '-' }}
+            {{ row.real_name || '-' }}
           </template>
         </el-table-column>
         <el-table-column label="手机号" width="130">
           <template #default="{ row }">
-            {{ row.profile?.phone || '-' }}
+            {{ row.phone || '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
         <el-table-column label="用户类型" width="120">
           <template #default="{ row }">
-            <el-tag v-if="row.profile?.user_type === 'athlete'" type="success">运动员</el-tag>
-            <el-tag v-else-if="row.profile?.user_type === 'organizer'" type="warning">组织者</el-tag>
+            <el-tag v-if="row.user_type === 'admin'" type="danger">管理员</el-tag>
+            <el-tag v-else-if="row.user_type === 'athlete'" type="success">运动员</el-tag>
+            <el-tag v-else-if="row.user_type === 'organizer'" type="warning">组织者</el-tag>
+            <el-tag v-else-if="row.user_type === 'referee'" type="primary">裁判</el-tag>
             <el-tag v-else type="info">未设置</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100">
+        <el-table-column label="状态" width="120">
           <template #default="{ row }">
-            <el-tag :type="row.is_active ? 'success' : 'danger'">
-              {{ row.is_active ? '活跃' : '禁用' }}
-            </el-tag>
+            <el-switch
+              v-model="row.is_active"
+              @change="handleStatusChange(row)"
+              :disabled="row.is_superuser || switchLoading[row.id]"
+              active-text="启用"
+              inactive-text="禁用"
+            />
           </template>
         </el-table-column>
         <el-table-column label="注册时间" width="180">
@@ -124,15 +132,17 @@
         <el-descriptions-item label="用户ID">{{ currentUser.id }}</el-descriptions-item>
         <el-descriptions-item label="用户名">{{ currentUser.username }}</el-descriptions-item>
         <el-descriptions-item label="邮箱">{{ currentUser.email || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="姓名">{{ currentUser.profile?.real_name || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="手机号">{{ currentUser.profile?.phone || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="姓名">{{ currentUser.real_name || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="手机号">{{ currentUser.phone || '-' }}</el-descriptions-item>
         <el-descriptions-item label="性别">
-          {{ getGenderText(currentUser.profile?.gender) }}
+          {{ getGenderText(currentUser.gender) }}
         </el-descriptions-item>
-        <el-descriptions-item label="出生日期">{{ currentUser.profile?.birth_date || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="出生日期">{{ currentUser.birth_date || '-' }}</el-descriptions-item>
         <el-descriptions-item label="用户类型">
-          <el-tag v-if="currentUser.profile?.user_type === 'athlete'" type="success">运动员</el-tag>
-          <el-tag v-else-if="currentUser.profile?.user_type === 'organizer'" type="warning">组织者</el-tag>
+          <el-tag v-if="currentUser.user_type === 'admin'" type="danger">管理员</el-tag>
+          <el-tag v-else-if="currentUser.user_type === 'athlete'" type="success">运动员</el-tag>
+          <el-tag v-else-if="currentUser.user_type === 'organizer'" type="warning">组织者</el-tag>
+          <el-tag v-else-if="currentUser.user_type === 'referee'" type="primary">裁判</el-tag>
           <el-tag v-else type="info">未设置</el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="状态">
@@ -149,7 +159,7 @@
           {{ formatDateTime(currentUser.date_joined) }}
         </el-descriptions-item>
         <el-descriptions-item label="个人简介" :span="2">
-          {{ currentUser.profile?.bio || '-' }}
+          {{ currentUser.bio || '-' }}
         </el-descriptions-item>
       </el-descriptions>
 
@@ -164,7 +174,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
-import { getUserList, getUserDetail, deleteUser } from '@/api/user'
+import { getUserList, getUserDetail, deleteUser, activateUser, deactivateUser } from '@/api/user'
 
 // 搜索和筛选
 const searchQuery = ref('')
@@ -173,6 +183,7 @@ const userTypeFilter = ref('')
 // 用户列表
 const users = ref([])
 const loading = ref(false)
+const switchLoading = ref({})
 
 // 分页
 const currentPage = ref(1)
@@ -264,6 +275,27 @@ const handleDelete = async (user) => {
       console.error('删除用户失败:', error)
       ElMessage.error(error.response?.data?.error || '删除用户失败')
     }
+  }
+}
+
+// 状态切换
+const handleStatusChange = async (user) => {
+  switchLoading.value[user.id] = true
+  try {
+    if (user.is_active) {
+      await activateUser(user.id)
+      ElMessage.success('用户已启用')
+    } else {
+      await deactivateUser(user.id)
+      ElMessage.success('用户已禁用')
+    }
+  } catch (error) {
+    // 恢复原状态
+    user.is_active = !user.is_active
+    console.error('更新失败:', error)
+    ElMessage.error(error.response?.data?.error || '更新失败')
+  } finally {
+    switchLoading.value[user.id] = false
   }
 }
 

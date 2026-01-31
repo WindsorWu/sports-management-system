@@ -207,10 +207,10 @@ const fetchStats = async () => {
       getResultList({ page_size: 1 })
     ])
 
-    stats.usersCount = users.data.count || 0
-    stats.eventsCount = events.data.count || 0
-    stats.registrationsCount = registrations.data.count || 0
-    stats.resultsCount = results.data.count || 0
+    stats.usersCount = users.count || 0
+    stats.eventsCount = events.count || 0
+    stats.registrationsCount = registrations.count || 0
+    stats.resultsCount = results.count || 0
   } catch (error) {
     console.error('获取统计数据失败:', error)
     ElMessage.error('获取统计数据失败')
@@ -225,7 +225,7 @@ const fetchPendingRegistrations = async () => {
       status: 'pending',
       page_size: 10
     })
-    pendingRegistrations.value = response.data.results || []
+    pendingRegistrations.value = response.results || []
   } catch (error) {
     console.error('获取待审核报名失败:', error)
     ElMessage.error('获取待审核报名失败')
@@ -306,16 +306,16 @@ const initRegistrationTrendChart = async () => {
 const initEventStatusChart = async () => {
   try {
     // 获取不同状态的赛事数量
-    const [draft, published, ended] = await Promise.all([
+    const [draft, published, finished] = await Promise.all([
       getEventList({ status: 'draft', page_size: 1 }),
       getEventList({ status: 'published', page_size: 1 }),
-      getEventList({ status: 'ended', page_size: 1 })
+      getEventList({ status: 'finished', page_size: 1 })
     ])
 
     const data = [
-      { value: draft.data.count || 0, name: '草稿' },
-      { value: published.data.count || 0, name: '已发布' },
-      { value: ended.data.count || 0, name: '已结束' }
+      { value: draft.count || 0, name: '草稿' },
+      { value: published.count || 0, name: '已发布' },
+      { value: finished.count || 0, name: '已结束' }
     ]
 
     if (!statusChartInstance) {

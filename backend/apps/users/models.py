@@ -7,6 +7,7 @@ class User(AbstractUser):
     USER_TYPE_CHOICES = (
         ('athlete', '运动员'),
         ('organizer', '组织者'),
+        ('referee', '裁判'),
         ('admin', '管理员'),
     )
     

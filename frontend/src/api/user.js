@@ -98,3 +98,23 @@ export function deleteUser(id) {
     method: 'delete'
   })
 }
+
+/**
+ * 启用用户（管理员）
+ */
+export function activateUser(id) {
+  return request({
+    url: `/users/${id}/activate/`,
+    method: 'put'
+  })
+}
+
+/**
+ * 禁用用户（管理员）
+ */
+export function deactivateUser(id) {
+  return request({
+    url: `/users/${id}/deactivate/`,
+    method: 'put'
+  })
+}

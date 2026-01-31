@@ -139,28 +139,42 @@
               style="width: 100%"
               :empty-text="'暂无成绩记录'"
             >
-              <el-table-column prop="event_name" label="赛事名称" min-width="200" />
-              <el-table-column prop="event_type" label="赛事类型" width="120">
+              <el-table-column label="赛事名称" min-width="200">
                 <template #default="{ row }">
-                  <el-tag>{{ row.event_type }}</el-tag>
+                  {{ row.event_title || '-' }}
                 </template>
               </el-table-column>
-              <el-table-column prop="score" label="成绩" width="120">
+              <el-table-column label="轮次" width="100">
+                <template #default="{ row }">
+                  <el-tag v-if="row.round_type === 'final'" type="danger">决赛</el-tag>
+                  <el-tag v-else-if="row.round_type === 'semifinal'" type="warning">半决赛</el-tag>
+                  <el-tag v-else-if="row.round_type === 'preliminary'" type="info">初赛</el-tag>
+                  <el-tag v-else>-</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="成绩" width="120">
                 <template #default="{ row }">
                   <span class="score-text">{{ row.score }}</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="ranking" label="排名" width="100">
+              <el-table-column label="排名" width="100">
                 <template #default="{ row }">
                   <el-tag
-                    :type="getRankingType(row.ranking)"
+                    v-if="row.rank"
+                    :type="getRankingType(row.rank)"
                     effect="dark"
                   >
-                    第 {{ row.ranking }} 名
+                    第{{ row.rank }}名
                   </el-tag>
+                  <span v-else>-</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="created_at" label="发布时间" width="180">
+              <el-table-column label="奖项" width="120">
+                <template #default="{ row }">
+                  {{ row.award || '-' }}
+                </template>
+              </el-table-column>
+              <el-table-column label="发布时间" width="180">
                 <template #default="{ row }">
                   {{ formatDate(row.created_at, 'YYYY-MM-DD HH:mm') }}
                 </template>
@@ -170,7 +184,7 @@
                   <el-button
                     link
                     type="primary"
-                    @click="goToEventDetail(row.event_id)"
+                    @click="goToEventDetail(row.event)"
                   >
                     查看赛事
                   </el-button>
@@ -432,10 +446,10 @@ const getStatusText = (status) => {
 }
 
 // 获取排名标签类型
-const getRankingType = (ranking) => {
-  if (ranking === 1) return 'danger'
-  if (ranking === 2) return 'warning'
-  if (ranking === 3) return 'success'
+const getRankingType = (rank) => {
+  if (rank === 1) return 'danger'
+  if (rank === 2) return 'warning'
+  if (rank === 3) return 'success'
   return 'info'
 }
 

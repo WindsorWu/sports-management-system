@@ -15,9 +15,9 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'real_name', 'phone', 'user_type',
             'avatar', 'gender', 'birth_date', 'id_card', 'emergency_contact',
             'emergency_phone', 'organization', 'bio', 'is_verified',
-            'created_at', 'updated_at'
+            'is_active', 'is_staff', 'date_joined', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'is_verified']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'is_verified', 'date_joined']
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):

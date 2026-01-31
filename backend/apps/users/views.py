@@ -144,3 +144,40 @@ class UserViewSet(viewsets.ModelViewSet):
         from apps.results.serializers import ResultSerializer
         serializer = ResultSerializer(results, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['put'])
+    def activate(self, request, pk=None):
+        """
+        启用用户
+        PUT /api/users/{id}/activate/
+        """
+        user = self.get_object()
+        user.is_active = True
+        user.save()
+
+        return Response({
+            'message': '用户已启用',
+            'user': UserSerializer(user).data
+        })
+
+    @action(detail=True, methods=['put'])
+    def deactivate(self, request, pk=None):
+        """
+        禁用用户
+        PUT /api/users/{id}/deactivate/
+        """
+        user = self.get_object()
+
+        # 不允许禁用超级管理员
+        if user.is_superuser:
+            return Response({
+                'error': '不能禁用超级管理员账户'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        user.is_active = False
+        user.save()
+
+        return Response({
+            'message': '用户已禁用',
+            'user': UserSerializer(user).data
+        })
