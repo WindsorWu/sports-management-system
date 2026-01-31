@@ -113,6 +113,62 @@ class EventViewSet(viewsets.ModelViewSet):
         serializer = EventListSerializer(events, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['post'])
+    def upload_image(self, request):
+        """
+        上传赛事图片到前端public目录
+        POST /api/events/upload_image/
+        """
+        import os
+        from django.conf import settings
+
+        # el-upload 默认使用 'file' 字段名
+        if 'file' not in request.FILES and 'image' not in request.FILES:
+            return Response({
+                'error': '请上传图片文件'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        image_file = request.FILES.get('file') or request.FILES.get('image')
+
+        # 验证文件类型
+        allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+        if image_file.content_type not in allowed_types:
+            return Response({
+                'error': '只支持 jpg, png, gif, webp 格式的图片'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 验证文件大小（2MB）
+        if image_file.size > 2 * 1024 * 1024:
+            return Response({
+                'error': '图片大小不能超过 2MB'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 生成唯一文件名
+        import uuid
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        random_str = str(uuid.uuid4())[:8]
+        extension = image_file.name.split('.')[-1]
+        filename = f'event_{timestamp}_{random_str}.{extension}'
+
+        # 前端 public 目录路径
+        frontend_public_dir = os.path.join(settings.BASE_DIR, '..', 'frontend', 'public', 'images', 'events')
+        os.makedirs(frontend_public_dir, exist_ok=True)
+
+        # 保存文件
+        file_path = os.path.join(frontend_public_dir, filename)
+        with open(file_path, 'wb+') as destination:
+            for chunk in image_file.chunks():
+                destination.write(chunk)
+
+        # 返回相对路径
+        relative_path = f'/images/events/{filename}'
+
+        return Response({
+            'message': '图片上传成功',
+            'image': relative_path
+        })
+
     @action(detail=False, methods=['get'])
     def can_register(self, request):
         """

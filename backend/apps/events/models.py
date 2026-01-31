@@ -28,11 +28,12 @@ class Event(models.Model):
         verbose_name='赛事描述',
         help_text='详细的赛事介绍'
     )
-    cover_image = models.ImageField(
-        upload_to='events/%Y/%m/',
+    cover_image = models.CharField(
+        max_length=500,
         blank=True,
         null=True,
-        verbose_name='封面图片'
+        verbose_name='封面图片',
+        help_text='图片路径，如：/images/events/xxx.jpg'
     )
     event_type = models.CharField(
         max_length=50,

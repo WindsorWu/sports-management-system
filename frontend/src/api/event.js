@@ -54,21 +54,33 @@ export function deleteEvent(id) {
 }
 
 /**
- * 发布赛事（管理员）
+ * 发布赛事（管理员）- 通过修改status实现
  */
 export function publishEvent(id) {
   return request({
-    url: `/events/${id}/publish/`,
-    method: 'post'
+    url: `/events/${id}/`,
+    method: 'patch',
+    data: { status: 'published' }
   })
 }
 
 /**
- * 取消发布赛事（管理员）
+ * 取消发布赛事（管理员）- 通过修改status实现
  */
 export function unpublishEvent(id) {
   return request({
-    url: `/events/${id}/unpublish/`,
+    url: `/events/${id}/`,
+    method: 'patch',
+    data: { status: 'draft' }
+  })
+}
+
+/**
+ * 增加赛事点击量
+ */
+export function clickEvent(id) {
+  return request({
+    url: `/events/${id}/click/`,
     method: 'post'
   })
 }

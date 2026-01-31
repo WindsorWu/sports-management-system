@@ -16,7 +16,7 @@ export function getRegistrationList(params) {
  */
 export function getMyRegistrations() {
   return request({
-    url: '/registrations/me/',
+    url: '/registrations/my_registrations/',
     method: 'get'
   })
 }
@@ -47,8 +47,8 @@ export function createRegistration(data) {
  */
 export function cancelRegistration(id) {
   return request({
-    url: `/registrations/${id}/`,
-    method: 'delete'
+    url: `/registrations/${id}/cancel/`,
+    method: 'put'
   })
 }
 
@@ -66,19 +66,33 @@ export function updateRegistrationStatus(id, status) {
 /**
  * 审核报名（管理员）
  */
-export function approveRegistration(id) {
+export function approveRegistration(id, review_remarks) {
   return request({
     url: `/registrations/${id}/approve/`,
-    method: 'post'
+    method: 'put',
+    data: { review_remarks }
   })
 }
 
 /**
  * 拒绝报名（管理员）
  */
-export function rejectRegistration(id) {
+export function rejectRegistration(id, review_remarks) {
   return request({
     url: `/registrations/${id}/reject/`,
-    method: 'post'
+    method: 'put',
+    data: { review_remarks }
+  })
+}
+
+/**
+ * 导出报名数据（管理员）
+ */
+export function exportRegistrations(params) {
+  return request({
+    url: '/registrations/export/',
+    method: 'get',
+    params,
+    responseType: 'blob'
   })
 }

@@ -19,9 +19,10 @@ class Carousel(models.Model):
         null=True,
         verbose_name='描述'
     )
-    image = models.ImageField(
-        upload_to='carousel/%Y/%m/',
-        verbose_name='轮播图片'
+    image = models.CharField(
+        max_length=500,
+        verbose_name='轮播图片',
+        help_text='图片路径，如：/images/carousel/xxx.jpg'
     )
     link_url = models.URLField(
         blank=True,

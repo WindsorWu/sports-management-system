@@ -33,8 +33,8 @@ service.interceptors.response.use(
   response => {
     const res = response.data
 
-    // 如果返回的状态码不是200，则认为是错误
-    if (response.status !== 200 && response.status !== 201) {
+    // 如果返回的状态码不是2xx，则认为是错误
+    if (response.status < 200 || response.status >= 300) {
       ElMessage({
         message: res.detail || res.message || 'Error',
         type: 'error',

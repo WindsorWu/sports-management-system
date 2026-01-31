@@ -33,6 +33,12 @@ const routes = [
         meta: { title: '公告列表' }
       },
       {
+        path: 'announcements/:id',
+        name: 'AnnouncementDetail',
+        component: () => import('@/views/frontend/AnnouncementDetail.vue'),
+        meta: { title: '公告详情' }
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('@/views/frontend/Profile.vue'),

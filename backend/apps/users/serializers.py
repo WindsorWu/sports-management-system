@@ -69,10 +69,10 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'real_name', 'phone', 'user_type',
             'avatar', 'gender', 'birth_date', 'id_card', 'emergency_contact',
             'emergency_phone', 'organization', 'bio', 'is_verified',
-            'is_active', 'date_joined', 'created_at', 'updated_at'
+            'is_active', 'is_superuser', 'date_joined', 'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'username', 'is_verified', 'is_active',
+            'id', 'username', 'is_verified', 'is_active', 'is_superuser',
             'date_joined', 'created_at', 'updated_at'
         ]
 

@@ -16,7 +16,7 @@ export function getResultList(params) {
  */
 export function getMyResults() {
   return request({
-    url: '/results/me/',
+    url: '/results/my_results/',
     method: 'get'
   })
 }
@@ -54,6 +54,17 @@ export function updateResult(id, data) {
 }
 
 /**
+ * 部分更新成绩（管理员）
+ */
+export function patchResult(id, data) {
+  return request({
+    url: `/results/${id}/`,
+    method: 'patch',
+    data
+  })
+}
+
+/**
  * 删除成绩（管理员）
  */
 export function deleteResult(id) {
@@ -71,5 +82,27 @@ export function importResults(data) {
     url: '/results/import/',
     method: 'post',
     data
+  })
+}
+
+/**
+ * 发布成绩（管理员）
+ */
+export function publishResult(id) {
+  return request({
+    url: `/results/${id}/publish/`,
+    method: 'post'
+  })
+}
+
+/**
+ * 导出成绩数据（管理员）
+ */
+export function exportResults(params) {
+  return request({
+    url: '/results/export/',
+    method: 'get',
+    params,
+    responseType: 'blob'
   })
 }

@@ -87,3 +87,13 @@ export function deleteComment(id) {
     method: 'delete'
   })
 }
+
+/**
+ * 获取我的收藏列表
+ */
+export function getMyFavorites() {
+  return request({
+    url: '/interactions/favorites/',
+    method: 'get'
+  })
+}
