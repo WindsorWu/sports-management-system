@@ -79,14 +79,16 @@ def export_registrations(queryset):
     导出报名名单
     """
     fields = [
-        'event.name',
+        'event.title',
         'user.username',
         'user.real_name',
-        'user.phone',
-        'registered_at',
+        'participant_birth_date',
+        'participant_id_card',
+        'participant_phone',
+        'created_at',
         'status',
     ]
-    headers = ['赛事名称', '用户名', '姓名', '手机号', '报名时间', '审核状态']
+    headers = ['赛事名称', '用户名', '姓名', '出生日期', '身份证', '手机号', '报名时间', '审核状态']
     filename = f'registration_list_{datetime.now().strftime("%Y%m%d%H%M%S")}'
 
     return export_to_excel(queryset, fields, headers, filename)
