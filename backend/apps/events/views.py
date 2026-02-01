@@ -7,12 +7,14 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.exceptions import PermissionDenied
 from django.utils import timezone
 from django.db.models import Q
 
-from .models import Event
-from .serializers import EventSerializer, EventListSerializer, EventDetailSerializer
-from utils.permissions import IsAdmin, IsOwnerOrAdmin, IsAuthenticatedOrReadOnly
+from .models import Event, EventAssignment
+from .serializers import EventSerializer, EventListSerializer, EventDetailSerializer, EventAssignmentSerializer
+from utils.permissions import IsAdmin, IsOwnerOrAdmin, IsAuthenticatedOrReadOnly, IsAdminOrReferee
+from utils.export import export_results
 
 
 class EventViewSet(viewsets.ModelViewSet):
@@ -224,3 +226,47 @@ class EventViewSet(viewsets.ModelViewSet):
         from apps.announcements.serializers import AnnouncementSerializer
         serializer = AnnouncementSerializer(announcements, many=True)
         return Response(serializer.data)
+
+
+class EventAssignmentViewSet(viewsets.ModelViewSet):
+    """赛事任务管理"""
+    queryset = EventAssignment.objects.select_related('event', 'referee', 'assigned_by').all()
+    serializer_class = EventAssignmentSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['event', 'referee', 'round_type']
+    ordering_fields = ['assigned_at']
+    ordering = ['-assigned_at']
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [IsAdminOrReferee]
+        return [permission() for permission in permission_classes]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated and user.user_type == 'referee':
+            return self.queryset.filter(referee=user)
+        return self.queryset
+
+    def ensure_admin(self):
+        user = self.request.user
+        if not user.is_authenticated or (not user.is_superuser and user.user_type != 'admin'):
+            raise PermissionDenied('仅管理员可以修改赛事任务')
+
+    def create(self, request, *args, **kwargs):
+        self.ensure_admin()
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        self.ensure_admin()
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        self.ensure_admin()
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        self.ensure_admin()
+        return super().destroy(request, *args, **kwargs)

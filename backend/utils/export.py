@@ -100,11 +100,11 @@ def export_results(queryset):
         'event.name',
         'user.username',
         'user.real_name',
-        'score',
+        'round_type',
         'rank',
-        'created_at',
+        'score'
     ]
-    headers = ['赛事名称', '用户名', '姓名', '成绩', '名次', '录入时间']
+    headers = ['赛事名称', '用户名', '姓名', '轮次', '排名', '成绩']
     filename = f'results_list_{datetime.now().strftime("%Y%m%d%H%M%S")}'
 
     return export_to_excel(queryset, fields, headers, filename)

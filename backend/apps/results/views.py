@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
+from django.db.models import Case, When, IntegerField
 
 from .models import Result
 from .serializers import ResultSerializer, ResultCreateSerializer, ResultListSerializer
@@ -115,8 +116,14 @@ class ResultViewSet(viewsets.ModelViewSet):
         if round_type:
             queryset = queryset.filter(round_type=round_type)
 
-        # 按排名排序
-        queryset = queryset.order_by('event', 'rank')
+        round_order = Case(
+            When(round_type='final', then=1),
+            When(round_type='semifinal', then=2),
+            When(round_type='preliminary', then=3),
+            default=4,
+            output_field=IntegerField()
+        )
+        queryset = queryset.order_by(round_order, 'rank', 'score')
 
         # 使用导出工具导出
         return export_results(queryset)

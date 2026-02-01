@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from apps.results.models import Result
 
 
 class Event(models.Model):
@@ -149,3 +150,53 @@ class Event(models.Model):
     
     def __str__(self):
         return self.title
+
+
+class EventAssignment(models.Model):
+    """赛事裁判任务"""
+    ROUND_CHOICES = Result.STATUS_CHOICES
+
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name='assignments',
+        verbose_name='赛事'
+    )
+    referee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='assignments',
+        verbose_name='裁判',
+        limit_choices_to={'user_type': 'referee'}
+    )
+    round_type = models.CharField(
+        max_length=20,
+        choices=ROUND_CHOICES,
+        verbose_name='轮次'
+    )
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='assigned_results',
+        null=True,
+        blank=True,
+        verbose_name='分配人'
+    )
+    assigned_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='分配时间'
+    )
+    remarks = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='备注'
+    )
+
+    class Meta:
+        db_table = 'event_assignment'
+        verbose_name = '赛事任务'
+        verbose_name_plural = verbose_name
+        ordering = ['-assigned_at']
+
+    def __str__(self):
+        return f"{self.event.title} - {self.referee.real_name} - {self.get_round_type_display()}"

@@ -2,7 +2,8 @@
 赛事应用序列化器
 """
 from rest_framework import serializers
-from .models import Event
+from .models import Event, EventAssignment
+from apps.interactions.models import Favorite
 
 
 class EventSerializer(serializers.ModelSerializer):
@@ -98,7 +99,6 @@ class EventListSerializer(serializers.ModelSerializer):
         if not request or not request.user.is_authenticated:
             return False
 
-        from apps.interactions.models import Favorite
         return Favorite.objects.filter(
             user=request.user,
             content_type__model='event',
@@ -198,9 +198,33 @@ class EventDetailSerializer(serializers.ModelSerializer):
         if not request or not request.user.is_authenticated:
             return False
 
-        from apps.interactions.models import Favorite
         return Favorite.objects.filter(
             user=request.user,
             content_type__model='event',
             object_id=obj.id
         ).exists()
+
+
+class EventAssignmentSerializer(serializers.ModelSerializer):
+    """裁判任务序列化器"""
+    event_title = serializers.CharField(source='event.title', read_only=True)
+    event_start_time = serializers.DateTimeField(source='event.start_time', read_only=True)
+    event_round = serializers.CharField(source='event.event_type', read_only=True)
+    referee_name = serializers.CharField(source='referee.real_name', read_only=True)
+    referee_username = serializers.CharField(source='referee.username', read_only=True)
+    round_display = serializers.CharField(source='get_round_type_display', read_only=True)
+    assigned_by_name = serializers.CharField(source='assigned_by.real_name', read_only=True)
+
+    class Meta:
+        model = EventAssignment
+        fields = [
+            'id', 'event', 'event_title', 'event_start_time', 'event_round',
+            'referee', 'referee_name', 'referee_username', 'round_type',
+            'round_display', 'assigned_by', 'assigned_by_name', 'remarks',
+            'assigned_at'
+        ]
+        read_only_fields = ['id', 'assigned_by', 'assigned_at', 'event_title', 'referee_name', 'round_display', 'assigned_by_name']
+
+    def create(self, validated_data):
+        validated_data['assigned_by'] = self.context['request'].user
+        return super().create(validated_data)
