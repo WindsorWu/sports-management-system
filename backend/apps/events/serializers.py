@@ -58,6 +58,7 @@ class EventListSerializer(serializers.ModelSerializer):
             'location', 'start_time', 'end_time', 'registration_start',
             'registration_end', 'max_participants', 'current_participants',
             'registration_fee', 'organizer_name', 'view_count', 'is_featured',
+            'description',
             'created_at',
             # 新增字段别名
             'name', 'image', 'event_time', 'registration_start_time',
