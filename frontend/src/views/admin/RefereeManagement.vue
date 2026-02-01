@@ -39,7 +39,7 @@
             <span v-else style="color: #999;">未分配赛事</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200">
+        <el-table-column label="操作" width="240">
           <template #default="{ row }">
             <el-button
               type="primary"
@@ -47,6 +47,14 @@
               @click="openAssignDialog(row)"
             >
               分配赛事
+            </el-button>
+            <el-button
+              type="danger"
+              size="small"
+              style="margin-left: 8px;"
+              @click="handleOpenCancelDialog(row)"
+            >
+              取消分配
             </el-button>
           </template>
         </el-table-column>
@@ -86,6 +94,40 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <el-dialog
+      v-model="cancelDialogVisible"
+      title="取消裁判赛事分配"
+      width="520px"
+    >
+      <div v-if="selectedReferee">
+        <p style="margin-bottom: 12px; font-weight: 600;">
+          {{ selectedReferee.real_name || selectedReferee.username }}（{{ selectedReferee.username }}）
+        </p>
+        <el-select
+          v-model="cancelEventIds"
+          multiple
+          filterable
+          collapse-tags
+          placeholder="请选择要取消的赛事"
+          style="width: 100%;"
+        >
+          <el-option
+            v-for="event in accessMap[selectedReferee.id]"
+            :key="`cancel-${selectedReferee.id}-event-${event.id}`"
+            :label="`${event.title} (${event.start_time ? event.start_time.slice(0, 10) : '未排期'})`"
+            :value="event.id"
+          />
+        </el-select>
+      </div>
+
+      <template #footer>
+        <el-button @click="cancelDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleCancelSave" :loading="cancelling">
+          确认取消
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -101,9 +143,12 @@ const events = ref([])
 const accessMap = reactive({})
 const loading = ref(false)
 const dialogVisible = ref(false)
+const cancelDialogVisible = ref(false)
 const selectedReferee = ref(null)
 const selectedEventIds = ref([])
+const cancelEventIds = ref([])
 const assigning = ref(false)
+const cancelling = ref(false)
 
 const fetchReferees = async () => {
   loading.value = true
@@ -157,6 +202,10 @@ const openAssignDialog = async (referee) => {
 
 const handleSave = async () => {
   if (!selectedReferee.value) return
+  if (!selectedEventIds.value.length) {
+    ElMessage.warning('请选择需要分配的赛事')
+    return
+  }
   assigning.value = true
   try {
     await assignRefereeEvents({ referee: selectedReferee.value.id, event_ids: selectedEventIds.value })
@@ -168,6 +217,37 @@ const handleSave = async () => {
     ElMessage.error('分配失败，请稍后重试')
   } finally {
     assigning.value = false
+  }
+}
+
+const handleOpenCancelDialog = (row) => {
+  selectedReferee.value = row
+  cancelDialogVisible.value = true
+  cancelEventIds.value = []
+}
+
+const handleCancelSave = async () => {
+  if (!selectedReferee.value) return
+  if (!cancelEventIds.value.length) {
+    ElMessage.warning('请选择要取消的赛事')
+    return
+  }
+  cancelling.value = true
+  try {
+    const assigned = accessMap[selectedReferee.value.id] || []
+    const toCancelSet = new Set(cancelEventIds.value)
+    const remainingEventIds = assigned
+      .filter((event) => !toCancelSet.has(event.id))
+      .map((event) => event.id)
+    await assignRefereeEvents({ referee: selectedReferee.value.id, event_ids: remainingEventIds })
+    ElMessage.success('取消分配成功')
+    await refreshAccessMap()
+    cancelDialogVisible.value = false
+  } catch (error) {
+    console.error('取消分配失败:', error)
+    ElMessage.error('取消分配失败，请稍后重试')
+  } finally {
+    cancelling.value = false
   }
 }
 

@@ -311,7 +311,11 @@ class RefereeEventAccessViewSet(viewsets.ModelViewSet):  # 必须是ModelViewSet
         grouped = defaultdict(list)
         refs = {}
         for access in queryset:
-            grouped[access.referee_id].append({'id': access.event_id, 'title': access.event.title})
+            grouped[access.referee_id].append({
+                'id': access.event_id,
+                'title': access.event.title,
+                'start_time': access.event.start_time
+            })
             refs[access.referee_id] = access.referee.real_name or access.referee.username
         summary = []
         for referee_id, events in grouped.items():
