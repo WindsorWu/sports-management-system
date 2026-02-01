@@ -11,7 +11,7 @@
             <el-button type="success" icon="Plus" @click="handleAdd">
               录入成绩
             </el-button>
-            <el-button type="warning" icon="Download" @click="handleExport">
+            <el-button type="warning" icon="Download" @click="handleExport" :disabled="!eventFilter">
               导出Excel
             </el-button>
           </div>
@@ -32,17 +32,15 @@
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
-        <el-button type="primary" @click="handleSearch" :loading="loading">
+        <el-button type="primary" @click="handleSearch" :loading="loading" :disabled="!eventFilter.value">
           搜索
         </el-button>
         <el-select
           v-model="eventFilter"
-          placeholder="筛选赛事"
-          clearable
+          placeholder="请选择赛事"
           style="width: 200px; margin-left: 10px;"
           @change="handleSearch"
         >
-          <el-option label="全部赛事" value="" />
           <el-option
             v-for="event in eventList"
             :key="event.id"
@@ -50,6 +48,10 @@
             :value="event.id"
           />
         </el-select>
+        <span v-if="!eventFilter" class="event-hint">
+          <el-icon><Warning /></el-icon>
+          请选择具体赛事后再进行查询、录入或导出
+        </span>
       </div>
 
       <!-- 成绩列表表格 -->
@@ -299,6 +301,12 @@ const formRules = {
 
 // 获取成绩列表
 const fetchResults = async () => {
+  if (!eventFilter.value) {
+    results.value = []
+    total.value = 0
+    ElMessage.warning('请先选择一个赛事，再查看该赛事的成绩')
+    return
+  }
   loading.value = true
   try {
     const params = {
@@ -400,7 +408,12 @@ const handlePageChange = (newPage) => {
 
 // 录入成绩
 const handleAdd = () => {
+  if (!eventFilter.value) {
+    ElMessage.warning('请先选择一个赛事，再录入成绩')
+    return
+  }
   resetForm()
+  form.event = eventFilter.value
   dialogVisible.value = true
 }
 
@@ -503,6 +516,10 @@ const handleDelete = async (result) => {
 
 // 导出Excel
 const handleExport = async () => {
+  if (!eventFilter.value) {
+    ElMessage.warning('请先选择一个赛事，再导出成绩')
+    return
+  }
   try {
     ElMessage.info('正在导出，请稍候...')
 
@@ -562,7 +579,6 @@ const formatDateTime = (dateStr) => {
 }
 
 onMounted(() => {
-  fetchResults()
   fetchEvents()
 })
 </script>
@@ -590,6 +606,14 @@ onMounted(() => {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+}
+
+.event-hint {
+  color: #e6a23c;
+  font-size: 12px;
+  margin-left: 10px;
+  display: flex;
+  align-items: center;
 }
 
 @media (max-width: 768px) {
