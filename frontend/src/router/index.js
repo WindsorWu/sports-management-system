@@ -70,49 +70,49 @@ const routes = [
         path: '',
         name: 'AdminDashboard',
         component: () => import('@/views/admin/Dashboard.vue'),
-        meta: { title: '管理后台' }
+        meta: { title: '管理后台', allowedRoles: ['admin', 'referee'] }
       },
       {
         path: 'users',
         name: 'AdminUsers',
         component: () => import('@/views/admin/Users.vue'),
-        meta: { title: '用户管理' }
+        meta: { title: '用户管理', allowedRoles: ['admin'] }
       },
       {
         path: 'events',
         name: 'AdminEvents',
         component: () => import('@/views/admin/Events.vue'),
-        meta: { title: '赛事管理' }
+        meta: { title: '赛事管理', allowedRoles: ['admin'] }
       },
       {
         path: 'registrations',
         name: 'AdminRegistrations',
         component: () => import('@/views/admin/Registrations.vue'),
-        meta: { title: '报名管理' }
+        meta: { title: '报名管理', allowedRoles: ['admin'] }
       },
       {
         path: 'results',
         name: 'AdminResults',
         component: () => import('@/views/admin/Results.vue'),
-        meta: { title: '成绩管理' }
+        meta: { title: '成绩管理', allowedRoles: ['admin', 'referee'] }
       },
       {
         path: 'announcements',
         name: 'AdminAnnouncements',
         component: () => import('@/views/admin/Announcements.vue'),
-        meta: { title: '公告管理' }
+        meta: { title: '公告管理', allowedRoles: ['admin'] }
       },
       {
         path: 'carousels',
         name: 'AdminCarousels',
         component: () => import('@/views/admin/Carousels.vue'),
-        meta: { title: '轮播图管理' }
+        meta: { title: '轮播图管理', allowedRoles: ['admin'] }
       },
       {
         path: 'feedback',
         name: 'AdminFeedback',
         component: () => import('@/views/admin/Feedback.vue'),
-        meta: { title: '反馈管理' }
+        meta: { title: '反馈管理', allowedRoles: ['admin'] }
       }
     ]
   },
@@ -164,11 +164,25 @@ router.beforeEach(async (to, from, next) => {
        }
      }
 
-     // 需要管理员/裁判权限
+     // 需要管理员/裁判权限，且要满足路由的角色要求
      if (to.meta.requiresAdmin && !userInfo.is_staff) {
        ElMessage.error('没有访问权限')
        next('/')
        return
+     }
+     if (to.meta.requiresAdmin) {
+       const allowedRoles = to.meta.allowedRoles
+       const userType = userInfo.user_type
+       if (allowedRoles && !allowedRoles.includes(userType)) {
+         ElMessage.error('没有访问权限')
+         next('/')
+         return
+       }
+       if (!allowedRoles && userType !== 'admin') {
+         ElMessage.error('没有访问权限')
+         next('/')
+         return
+       }
      }
    }
 

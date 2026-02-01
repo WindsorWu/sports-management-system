@@ -14,37 +14,15 @@
           router
           class="admin-menu"
         >
-          <el-menu-item index="/admin">
-            <el-icon><DataLine /></el-icon>
-            <span>数据统计</span>
-          </el-menu-item>
-          <el-menu-item index="/admin/users">
-            <el-icon><User /></el-icon>
-            <span>用户管理</span>
-          </el-menu-item>
-          <el-menu-item index="/admin/events">
-            <el-icon><Trophy /></el-icon>
-            <span>赛事管理</span>
-          </el-menu-item>
-          <el-menu-item index="/admin/registrations">
-            <el-icon><Document /></el-icon>
-            <span>报名管理</span>
-          </el-menu-item>
-          <el-menu-item index="/admin/results">
-            <el-icon><Medal /></el-icon>
-            <span>成绩管理</span>
-          </el-menu-item>
-          <el-menu-item index="/admin/announcements">
-            <el-icon><Bell /></el-icon>
-            <span>公告管理</span>
-          </el-menu-item>
-          <el-menu-item index="/admin/carousels">
-            <el-icon><Picture /></el-icon>
-            <span>轮播图管理</span>
-          </el-menu-item>
-          <el-menu-item index="/admin/feedback">
-            <el-icon><ChatDotRound /></el-icon>
-            <span>反馈管理</span>
+          <el-menu-item
+            v-for="item in visibleMenuItems"
+            :key="item.index"
+            :index="item.index"
+          >
+            <el-icon>
+              <component :is="item.icon" />
+            </el-icon>
+            <span>{{ item.label }}</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -109,6 +87,20 @@ import { ref, computed } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import {
+  Setting,
+  DataLine,
+  User,
+  Trophy,
+  Document,
+  Medal,
+  Bell,
+  Picture,
+  ChatDotRound,
+  HomeFilled,
+  ArrowDown,
+  SwitchButton
+} from '@element-plus/icons-vue'
 
 const store = useStore()
 const router = useRouter()
@@ -151,6 +143,27 @@ const handleLogout = () => {
     router.push('/login')
   }).catch(() => {})
 }
+
+// Define your routes here
+const allMenuItems = [
+  { index: '/admin', label: '数据统计', icon: DataLine, allowedRoles: ['admin', 'referee'] },
+  { index: '/admin/users', label: '用户管理', icon: User, allowedRoles: ['admin'] },
+  { index: '/admin/events', label: '赛事管理', icon: Trophy, allowedRoles: ['admin'] },
+  { index: '/admin/registrations', label: '报名管理', icon: Document, allowedRoles: ['admin'] },
+  { index: '/admin/results', label: '成绩管理', icon: Medal, allowedRoles: ['admin', 'referee'] },
+  { index: '/admin/announcements', label: '公告管理', icon: Bell, allowedRoles: ['admin'] },
+  { index: '/admin/carousels', label: '轮播图管理', icon: Picture, allowedRoles: ['admin'] },
+  { index: '/admin/feedback', label: '反馈管理', icon: ChatDotRound, allowedRoles: ['admin'] }
+]
+
+// Filter menu items based on user role
+const visibleMenuItems = computed(() => {
+  const userType = userInfo.value.user_type
+  if (!userType) return []
+  return allMenuItems.filter(item =>
+    !item.allowedRoles || item.allowedRoles.includes(userType)
+  )
+})
 </script>
 
 <style scoped>
