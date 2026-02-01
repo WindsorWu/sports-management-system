@@ -31,7 +31,7 @@ class IsAdminOrReferee(permissions.BasePermission):
 
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated and (
-            request.user.is_superuser or request.user.user_type in ['admin', 'organizer']
+            request.user.is_superuser or request.user.user_type in ['admin', 'organizer', 'referee']
         )
 
 

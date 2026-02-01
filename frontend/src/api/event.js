@@ -84,3 +84,13 @@ export function clickEvent(id) {
     method: 'post'
   })
 }
+
+/**
+ * 获取赛事的报名列表（管理员用途）
+ */
+export function getEventRegistrations(id) {
+  return request({
+    url: `/events/${id}/registrations/`,
+    method: 'get'
+  })
+}

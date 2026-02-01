@@ -41,6 +41,9 @@ class EventViewSet(viewsets.ModelViewSet):
         elif self.action == 'create':
             # 创建赛事需要认证
             permission_classes = [IsAuthenticated]
+        elif self.action == 'registrations':
+            # 报名列表需管理员或裁判
+            permission_classes = [IsAdminOrReferee]
         elif self.action in ['update', 'partial_update', 'destroy']:
             # 更新和删除需要是所有者或管理员
             permission_classes = [IsOwnerOrAdmin]

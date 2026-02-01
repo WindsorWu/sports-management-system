@@ -179,6 +179,11 @@ class RegistrationViewSet(viewsets.ModelViewSet):
         event_id = request.query_params.get('event')
         status_filter = request.query_params.get('status')
 
+        if not event_id:
+            return Response({
+                'error': '请先选择一个赛事'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         queryset = self.get_queryset()
 
         if event_id:

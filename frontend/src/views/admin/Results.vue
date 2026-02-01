@@ -240,7 +240,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Warning } from '@element-plus/icons-vue'
 import { getResultList, createResult, updateResult, patchResult, deleteResult, publishResult, exportResults } from '@/api/result'
-import { getEventList } from '@/api/event'
+import { getEventList, getEventRegistrations } from '@/api/event'
 import { getUserList, getUserDetail } from '@/api/user'
 
 // 搜索和筛选
@@ -363,13 +363,8 @@ const fetchRegistrations = async (eventId) => {
 
   registrationLoading.value = true
   try {
-    const { getRegistrationList } = await import('@/api/registration')
-    const response = await getRegistrationList({
-      event: eventId,
-      status: 'approved',
-      page_size: 1000
-    })
-    registrationList.value = response.results || []
+    const response = await getEventRegistrations(eventId)
+    registrationList.value = (response || []).filter(reg => reg.status === 'approved')
   } catch (error) {
     console.error('获取报名列表失败:', error)
     ElMessage.error('获取报名列表失败')
@@ -414,6 +409,7 @@ const handleAdd = () => {
   }
   resetForm()
   form.event = eventFilter.value
+  handleEventChange(eventFilter.value)
   dialogVisible.value = true
 }
 

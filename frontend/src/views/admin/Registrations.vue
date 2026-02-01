@@ -8,7 +8,7 @@
             <el-button type="primary" icon="Refresh" @click="fetchRegistrations" :loading="loading">
               刷新
             </el-button>
-            <el-button type="success" icon="Download" @click="handleExport" :loading="exporting">
+            <el-button type="success" icon="Download" @click="handleExport" :loading="exporting" :disabled="!eventFilter">
               导出Excel
             </el-button>
           </div>
@@ -32,6 +32,21 @@
         <el-button type="primary" @click="handleSearch" :loading="loading">
           搜索
         </el-button>
+        <el-select
+          v-model="eventFilter"
+          placeholder="请选择赛事"
+          style="width: 240px; margin-left: 10px;"
+          filterable
+          :disabled="eventList.length === 0"
+          @change="handleSearch"
+        >
+          <el-option
+            v-for="event in eventList"
+            :key="event.id"
+            :label="event.title"
+            :value="event.id"
+          />
+        </el-select>
         <el-select
           v-model="statusFilter"
           placeholder="报名状态"
@@ -238,12 +253,14 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { getRegistrationList, getRegistrationDetail, approveRegistration, rejectRegistration, exportRegistrations } from '@/api/registration'
+import { getEventList } from '@/api/event'
 
 const route = useRoute()
 
 // 搜索和筛选
 const searchQuery = ref('')
 const statusFilter = ref('')
+const eventFilter = ref('')
 const pendingCount = ref(0)
 
 // 报名列表
@@ -262,6 +279,9 @@ const currentRegistration = ref(null)
 // 导出状态
 const exporting = ref(false)
 
+// 赛事列表
+const eventList = ref([])
+
 // 获取报名列表
 const fetchRegistrations = async () => {
   loading.value = true
@@ -279,6 +299,10 @@ const fetchRegistrations = async () => {
       params.status = statusFilter.value
     }
 
+    if (eventFilter.value) {
+      params.event = eventFilter.value
+    }
+
     const response = await getRegistrationList(params)
     registrations.value = response.results || []
     total.value = response.count || 0
@@ -293,6 +317,19 @@ const fetchRegistrations = async () => {
     ElMessage.error('获取报名列表失败')
   } finally {
     loading.value = false
+  }
+}
+
+// 获取赛事列表
+const fetchEvents = async () => {
+  try {
+    const response = await getEventList({ page_size: 1000 })
+    eventList.value = response.results || []
+    if (eventList.value.length === 0) {
+      ElMessage.warning('暂无赛事可供筛选，无法导出')
+    }
+  } catch (error) {
+    console.error('获取赛事列表失败:', error)
   }
 }
 
@@ -389,6 +426,10 @@ const handleReject = async (row) => {
 
 // 导出Excel
 const handleExport = async () => {
+  if (!eventFilter.value) {
+    ElMessage.warning('请先选择一个赛事再导出')
+    return
+  }
   exporting.value = true
   try {
     const params = {}
@@ -400,6 +441,8 @@ const handleExport = async () => {
     if (statusFilter.value) {
       params.status = statusFilter.value
     }
+
+    params.event = eventFilter.value
 
     const response = await exportRegistrations(params)
 
@@ -445,6 +488,7 @@ onMounted(() => {
     statusFilter.value = route.query.status
   }
 
+  fetchEvents()
   fetchRegistrations()
 })
 </script>
