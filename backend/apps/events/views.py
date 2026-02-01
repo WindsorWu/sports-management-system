@@ -292,7 +292,7 @@ class EventAssignmentViewSet(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
 
-class RefereeEventAccessViewSet(viewsets.ModelViewSet):
+class RefereeEventAccessViewSet(viewsets.ModelViewSet):  # 必须是ModelViewSet
     """裁判赛事管理"""
     queryset = RefereeEventAccess.objects.select_related('referee', 'event').all()
     serializer_class = RefereeEventAccessSerializer
@@ -301,9 +301,31 @@ class RefereeEventAccessViewSet(viewsets.ModelViewSet):
     filterset_fields = ['referee']
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
+        queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+    def summarize_access(self, queryset):
+        from collections import defaultdict
+
+        grouped = defaultdict(list)
+        refs = {}
+        for access in queryset:
+            grouped[access.referee_id].append({'id': access.event_id, 'title': access.event.title})
+            refs[access.referee_id] = access.referee.real_name or access.referee.username
+        summary = []
+        for referee_id, events in grouped.items():
+            summary.append({
+                'referee': referee_id,
+                'referee_name': refs.get(referee_id, ''),
+                'events': events
+            })
+        return summary
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        return Response(self.summarize_access(queryset))
 
     @action(detail=False, methods=['post'])
     def assign(self, request):
@@ -336,4 +358,3 @@ class RefereeEventAccessViewSet(viewsets.ModelViewSet):
         events = [access.event for access in accesses]
         serializer = EventListSerializer(events, many=True, context={'request': request})
         return Response(serializer.data)
-

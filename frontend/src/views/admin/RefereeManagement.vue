@@ -29,11 +29,11 @@
             <template v-if="accessMap[row.id] && accessMap[row.id].length">
               <el-tag
                 v-for="event in accessMap[row.id]"
-                :key="`referee-${row.id}-event-${event.event}`"
-                size="mini"
-                :type="event.type || 'primary'"
+                :key="`referee-${row.id}-event-${event.id}`"
+                size="small"
+                type="primary"
               >
-                {{ event.event_title }}
+                {{ event.title }}
               </el-tag>
             </template>
             <span v-else style="color: #999;">未分配赛事</span>
@@ -94,7 +94,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getUserList } from '@/api/user'
 import { getEventList } from '@/api/event'
-import { getRefereeAccessList, assignRefereeEvents } from '@/api/referee'
+import { getRefereeAccessList, assignRefereeEvents, getRefereeAccessSummary } from '@/api/referee'
 
 const referees = ref([])
 const events = ref([])
@@ -130,14 +130,11 @@ const fetchEvents = async () => {
 
 const refreshAccessMap = async () => {
   try {
-    const response = await getRefereeAccessList({ page_size: 1000 })
-    const payload = response.results || response
+    const summary = await getRefereeAccessSummary({ page_size: 1000 })
+    const payload = summary || []
     const map = {}
-    (payload || []).forEach((item) => {
-      if (!map[item.referee]) {
-        map[item.referee] = []
-      }
-      map[item.referee].push(item)
+    payload.forEach((entry) => {
+      map[entry.referee] = entry.events || []
     })
     Object.keys(accessMap).forEach(key => delete accessMap[key])
     Object.assign(accessMap, map)

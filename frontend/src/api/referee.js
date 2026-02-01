@@ -31,3 +31,14 @@ export function getMyRefereeEvents() {
     method: 'get'
   })
 }
+
+/**
+ * 获取裁判可访问赛事的汇总
+ */
+export function getRefereeAccessSummary(params) {
+  return request({
+    url: '/events/referee-access/summary/',
+    method: 'get',
+    params
+  })
+}
