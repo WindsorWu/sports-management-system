@@ -99,7 +99,7 @@ def export_results(queryset):
     导出成绩表
     """
     fields = [
-        'event.name',
+        'event.title',
         'user.username',
         'user.real_name',
         'round_type',
