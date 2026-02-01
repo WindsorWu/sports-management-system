@@ -145,7 +145,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -446,18 +446,17 @@ const handleResize = () => {
   statusChartInstance?.resize()
 }
 
-onMounted(() => {
+onMounted(async () => {
   updateTime()
   timeInterval = setInterval(updateTime, 60000) // 每分钟更新一次
 
   fetchStats()
   fetchPendingRegistrations()
 
-  // 延迟初始化图表，确保DOM已渲染
-  setTimeout(() => {
-    initRegistrationTrendChart()
-    initEventStatusChart()
-  }, 100)
+  // 等待 DOM 完全渲染再初始化图表
+  await nextTick()
+  initRegistrationTrendChart()
+  initEventStatusChart()
 
   window.addEventListener('resize', handleResize)
 })
