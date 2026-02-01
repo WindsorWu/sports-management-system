@@ -17,6 +17,7 @@ from .serializers import (
 )
 from utils.permissions import IsAdmin, IsAdminOrReferee, IsOwnerOrAdmin
 from utils.export import export_registrations
+from apps.events.models import Event
 
 
 class RegistrationViewSet(viewsets.ModelViewSet):
@@ -184,6 +185,12 @@ class RegistrationViewSet(viewsets.ModelViewSet):
                 'error': '请先选择一个赛事'
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        event = Event.objects.filter(id=event_id).first()
+        if not event:
+            return Response({
+                'error': '赛事不存在'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         queryset = self.get_queryset()
 
         if event_id:
@@ -192,7 +199,7 @@ class RegistrationViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(status=status_filter)
 
         # 使用导出工具导出
-        return export_registrations(queryset)
+        return export_registrations(queryset, event_title=event.title)
 
     @action(detail=False, methods=['get'])
     def my_registrations(self, request):

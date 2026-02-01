@@ -100,7 +100,7 @@
               type="danger"
               size="small"
               @click="handleDelete(row)"
-              :disabled="row.is_staff"
+              :disabled="row.is_superuser"
             >
               删除
             </el-button>

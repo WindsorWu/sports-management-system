@@ -39,6 +39,7 @@ class EventListSerializer(serializers.ModelSerializer):
     is_registered = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
+    display_status = serializers.SerializerMethodField()
 
     # 添加字段别名以兼容前端
     name = serializers.CharField(source='title', read_only=True)
@@ -64,7 +65,9 @@ class EventListSerializer(serializers.ModelSerializer):
             # 联系人字段
             'contact_person', 'contact_phone',
             # 用户状态字段
-            'is_registered', 'is_liked', 'is_favorited'
+            'is_registered', 'is_liked', 'is_favorited',
+            # 动态状态字段
+            'display_status'
         ]
 
     def get_is_registered(self, obj):
@@ -105,6 +108,10 @@ class EventListSerializer(serializers.ModelSerializer):
             object_id=obj.id
         ).exists()
 
+    def get_display_status(self, obj):
+        """展示用动态状态"""
+        return obj.display_status
+
 
 class EventDetailSerializer(serializers.ModelSerializer):
     """赛事详情序列化器（完整版）"""
@@ -114,6 +121,7 @@ class EventDetailSerializer(serializers.ModelSerializer):
     is_registered = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
+    display_status = serializers.SerializerMethodField()
 
     # 添加字段别名以兼容前端
     name = serializers.CharField(source='title', read_only=True)
@@ -135,7 +143,7 @@ class EventDetailSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at',
             # 字段别名
             'name', 'image', 'registration_start_time', 'registration_end_time',
-            'click_count'
+            'click_count', 'display_status'
         ]
 
     def get_organizer_info(self, obj):
@@ -203,6 +211,10 @@ class EventDetailSerializer(serializers.ModelSerializer):
             content_type__model='event',
             object_id=obj.id
         ).exists()
+
+    def get_display_status(self, obj):
+        """展示用动态状态"""
+        return obj.display_status
 
 
 class EventAssignmentSerializer(serializers.ModelSerializer):

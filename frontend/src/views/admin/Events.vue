@@ -42,7 +42,9 @@
           <el-option label="全部" value="" />
           <el-option label="草稿" value="draft" />
           <el-option label="已发布" value="published" />
-          <el-option label="已结束" value="ended" />
+          <el-option label="进行中" value="ongoing" />
+          <el-option label="已结束" value="finished" />
+          <el-option label="已取消" value="cancelled" />
         </el-select>
       </div>
 
@@ -75,9 +77,9 @@
         <el-table-column prop="location" label="参赛地点" min-width="150" show-overflow-tooltip />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag v-if="row.status === 'draft'" type="info">草稿</el-tag>
-            <el-tag v-else-if="row.status === 'published'" type="success">已发布</el-tag>
-            <el-tag v-else-if="row.status === 'ended'" type="warning">已结束</el-tag>
+            <el-tag :type="getStatusMeta(row).type">
+              {{ getStatusMeta(row).label }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="180">
@@ -245,7 +247,9 @@
           <el-select v-model="form.status" placeholder="请选择状态" style="width: 100%;">
             <el-option label="草稿" value="draft" />
             <el-option label="已发布" value="published" />
-            <el-option label="已结束" value="ended" />
+            <el-option label="进行中" value="ongoing" />
+            <el-option label="已结束" value="finished" />
+            <el-option label="已取消" value="cancelled" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -306,6 +310,22 @@ const form = reactive({
   contact_person: '',
   contact_phone: ''
 })
+
+// 状态标签映射
+const STATUS_TAGS = {
+  draft: { label: '草稿', type: 'info' },
+  published: { label: '已发布', type: 'success' },
+  ongoing: { label: '进行中', type: 'success' },
+  finished: { label: '已结束', type: 'warning' },
+  cancelled: { label: '已取消', type: 'danger' },
+  default: { label: '未知状态', type: 'info' }
+}
+
+// 获取状态标签
+const getStatusMeta = (row) => {
+  const key = row.display_status || row.status
+  return STATUS_TAGS[key] || STATUS_TAGS.default
+}
 
 // 表单验证规则
 const formRules = {

@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from apps.results.models import Result
+from django.utils import timezone
 
 
 class Event(models.Model):
@@ -136,7 +137,14 @@ class Event(models.Model):
         auto_now=True,
         verbose_name='更新时间'
     )
-    
+
+    @property
+    def display_status(self):
+        """根据比赛时间动态展示已结束状态"""
+        if self.status in ('published', 'ongoing') and self.end_time and timezone.now() > self.end_time:
+            return 'finished'
+        return self.status
+
     class Meta:
         db_table = 'event'
         verbose_name = '赛事'

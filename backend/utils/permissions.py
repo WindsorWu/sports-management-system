@@ -42,6 +42,10 @@ class IsOwnerOrAdmin(permissions.BasePermission):
         # 管理员拥有所有权限
         if request.user.is_superuser:
             return True
+        if request.user.user_type == 'admin' and getattr(obj, 'user_type', None) == 'referee':
+            return True
+        if request.user.is_staff and getattr(obj, 'is_staff', False):
+            return True
         # 对象的所有者
         if hasattr(obj, 'user'):
             return obj.user == request.user

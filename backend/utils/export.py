@@ -5,6 +5,7 @@ Excel导出工具
 from openpyxl import Workbook
 from django.http import HttpResponse
 from datetime import datetime
+import re
 
 
 def export_to_excel(queryset, fields, headers, filename):
@@ -74,7 +75,38 @@ def export_to_excel(queryset, fields, headers, filename):
     return response
 
 
-def export_registrations(queryset):
+def sanitize_event_title(title):
+    """
+    清理赛事名称，去除特殊字符
+
+    :param title: 原始赛事名称
+    :return: 清理后的赛事名称
+    """
+    if not title:
+        return "未知赛事"
+    # 仅保留中文、字母、数字和部分特殊字符
+    title = re.sub(r'[^\w\s-]', '', title)
+    # 替换空格和连续的特殊字符为下划线
+    title = re.sub(r'[-\s]+', '_', title)
+    return title
+
+
+def build_filename(base_name, timestamp, event_title=None):
+    """
+    构建下载文件名
+
+    :param base_name: 基础文件名
+    :param timestamp: 时间戳
+    :param event_title: 赛事名称（可选）
+    :return: 完整的文件名
+    """
+    if event_title:
+        event_title = sanitize_event_title(event_title)
+        return f"{base_name}_{event_title}_{timestamp.strftime('%Y%m%d%H%M%S')}"
+    return f"{base_name}_{timestamp.strftime('%Y%m%d%H%M%S')}"
+
+
+def export_registrations(queryset, event_title=None):
     """
     导出报名名单
     """
@@ -89,7 +121,7 @@ def export_registrations(queryset):
         'status',
     ]
     headers = ['赛事名称', '用户名', '姓名', '出生日期', '身份证', '手机号', '报名时间', '审核状态']
-    filename = f'registration_list_{datetime.now().strftime("%Y%m%d%H%M%S")}'
+    filename = build_filename('registration_list', datetime.now(), event_title)
 
     return export_to_excel(queryset, fields, headers, filename)
 
@@ -107,6 +139,6 @@ def export_results(queryset):
         'score'
     ]
     headers = ['赛事名称', '用户名', '姓名', '轮次', '排名', '成绩']
-    filename = f'results_list_{datetime.now().strftime("%Y%m%d%H%M%S")}'
+    filename = build_filename('results_list', datetime.now())
 
     return export_to_excel(queryset, fields, headers, filename)

@@ -25,7 +25,7 @@ class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.select_related('organizer').all()
     serializer_class = EventSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['status', 'event_type', 'level', 'is_featured']
+    filterset_fields = ['event_type', 'level', 'is_featured']
     search_fields = ['title', 'description', 'location', 'event_type']
     ordering_fields = ['created_at', 'start_time', 'view_count']
     ordering = ['-created_at']
@@ -229,6 +229,22 @@ class EventViewSet(viewsets.ModelViewSet):
         from apps.announcements.serializers import AnnouncementSerializer
         serializer = AnnouncementSerializer(announcements, many=True)
         return Response(serializer.data)
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status_param = self.request.query_params.get('status')
+        if not status_param:
+            return queryset
+
+        now = timezone.now()
+        if status_param == 'finished':
+            finished_filter = (
+                Q(status='finished') |
+                (Q(status__in=['published', 'ongoing']) & Q(end_time__lt=now))
+            )
+            return queryset.filter(finished_filter)
+
+        return queryset.filter(status=status_param)
 
 
 class EventAssignmentViewSet(viewsets.ModelViewSet):
