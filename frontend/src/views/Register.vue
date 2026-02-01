@@ -59,6 +59,12 @@
             size="large"
           />
         </el-form-item>
+        <el-form-item label="角色" prop="user_type">
+          <el-select v-model="registerForm.user_type" placeholder="请选择角色" size="large">
+            <el-option label="运动员" value="athlete" />
+            <el-option label="裁判" value="referee" />
+          </el-select>
+        </el-form-item>
         <el-form-item>
           <el-button
             type="primary"
@@ -98,7 +104,8 @@ const registerForm = reactive({
   password: '',
   confirmPassword: '',
   full_name: '',
-  phone: ''
+  phone: '',
+  user_type: 'athlete'
 })
 
 const validatePass = (rule, value, callback) => {
@@ -159,6 +166,9 @@ const registerRules = {
   ],
   phone: [
     { validator: validatePhoneRule, trigger: 'blur' }
+  ],
+  user_type: [
+    { required: true, message: '请选择身份', trigger: 'change' }
   ]
 }
 
@@ -174,10 +184,10 @@ const handleRegister = async () => {
           username: registerForm.username,
           email: registerForm.email,
           password: registerForm.password,
-          password_confirm: registerForm.confirmPassword,  // 前端字段名转换
-          real_name: registerForm.full_name,  // full_name → real_name
+          password_confirm: registerForm.confirmPassword,
+          real_name: registerForm.full_name,
           phone: registerForm.phone,
-          user_type: 'athlete'  // 默认注册为运动员
+          user_type: registerForm.user_type
         }
 
         await store.dispatch('user/register', data)

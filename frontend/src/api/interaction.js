@@ -5,7 +5,7 @@ import request from '@/utils/request'
  */
 export function like(targetType, targetId) {
   return request({
-    url: `/interactions/like/`,
+    url: `/interactions/likes/`,
     method: 'post',
     data: {
       target_type: targetType,
@@ -19,7 +19,7 @@ export function like(targetType, targetId) {
  */
 export function unlike(targetType, targetId) {
   return request({
-    url: `/interactions/unlike/`,
+    url: `/interactions/likes/unlike/`,
     method: 'post',
     data: {
       target_type: targetType,
@@ -33,7 +33,7 @@ export function unlike(targetType, targetId) {
  */
 export function favorite(targetType, targetId) {
   return request({
-    url: `/interactions/favorite/`,
+    url: `/interactions/favorites/`,
     method: 'post',
     data: {
       target_type: targetType,
@@ -47,7 +47,7 @@ export function favorite(targetType, targetId) {
  */
 export function unfavorite(targetType, targetId) {
   return request({
-    url: `/interactions/unfavorite/`,
+    url: `/interactions/favorites/unfavorite/`,
     method: 'post',
     data: {
       target_type: targetType,

@@ -208,7 +208,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Plus } from '@element-plus/icons-vue'
-import { getAnnouncementList, createAnnouncement, updateAnnouncement, deleteAnnouncement, publishAnnouncement } from '@/api/announcement'
+import { getAnnouncementList, createAnnouncement, updateAnnouncement, deleteAnnouncement, publishAnnouncement, getAnnouncementDetail } from '@/api/announcement'
 import { getToken } from '@/utils/auth'
 
 // 搜索
@@ -317,15 +317,22 @@ const handleAdd = () => {
 }
 
 // 编辑公告
-const handleEdit = (announcement) => {
-  form.id = announcement.id
-  form.title = announcement.title
-  form.summary = announcement.summary || ''
-  form.image = announcement.image || ''
-  form.content = announcement.content || ''
-  form.is_pinned = announcement.is_pinned
-  form.status = announcement.status
-  dialogVisible.value = true
+const handleEdit = async (announcement) => {
+  resetForm()
+  try {
+    const detail = await getAnnouncementDetail(announcement.id)
+    form.id = detail.id
+    form.title = detail.title
+    form.summary = detail.summary || ''
+    form.image = detail.image || detail.cover_image || ''
+    form.content = detail.content || ''
+    form.is_pinned = detail.is_pinned
+    form.status = detail.status || 'draft'
+    dialogVisible.value = true
+  } catch (error) {
+    console.error('获取公告详情失败:', error)
+    ElMessage.error('获取公告详情失败')
+  }
 }
 
 // 提交表单

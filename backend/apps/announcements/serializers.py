@@ -11,14 +11,16 @@ class AnnouncementSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source='author.real_name', read_only=True)
     author_username = serializers.CharField(source='author.username', read_only=True)
     event_title = serializers.CharField(source='event.title', read_only=True)
+    image = serializers.CharField(source='cover_image', required=False, allow_null=True)
+    status = serializers.SerializerMethodField()
 
     class Meta:
         model = Announcement
         fields = [
-            'id', 'title', 'content', 'announcement_type', 'priority',
-            'event', 'event_title', 'cover_image', 'attachments', 'author',
+            'id', 'title', 'content', 'summary', 'announcement_type', 'priority',
+            'event', 'event_title', 'cover_image', 'image', 'attachments', 'author',
             'author_name', 'author_username', 'is_published', 'is_pinned',
-            'view_count', 'publish_time', 'expire_time', 'created_at', 'updated_at'
+            'view_count', 'publish_time', 'expire_time', 'created_at', 'updated_at', 'status'
         ]
         read_only_fields = [
             'id', 'author', 'view_count', 'created_at', 'updated_at',
@@ -41,31 +43,47 @@ class AnnouncementSerializer(serializers.ModelSerializer):
                 validated_data['publish_time'] = timezone.now()
         return super().update(instance, validated_data)
 
+    def to_internal_value(self, data):
+        data = data.copy()
+        status_value = data.pop('status', None)
+        if status_value is not None:
+            data['is_published'] = status_value == 'published'
+        return super().to_internal_value(data)
+
+    def get_status(self, obj):
+        return 'published' if obj.is_published else 'draft'
+
 
 class AnnouncementListSerializer(serializers.ModelSerializer):
     """公告列表序列化器（简化版）"""
     author_name = serializers.CharField(source='author.real_name', read_only=True)
     event_title = serializers.CharField(source='event.title', read_only=True)
+    status = serializers.SerializerMethodField()
+    image = serializers.CharField(source='cover_image', read_only=True, allow_null=True)
 
     class Meta:
         model = Announcement
         fields = [
-            'id', 'title', 'announcement_type', 'priority', 'event_title',
-            'cover_image', 'author_name', 'is_published', 'is_pinned',
-            'view_count', 'publish_time', 'created_at'
+            'id', 'title', 'summary', 'announcement_type', 'priority', 'event_title',
+            'cover_image', 'image', 'author_name', 'is_published', 'is_pinned',
+            'view_count', 'publish_time', 'created_at', 'status'
         ]
+
+    def get_status(self, obj):
+        return 'published' if obj.is_published else 'draft'
 
 
 class AnnouncementDetailSerializer(serializers.ModelSerializer):
     """公告详情序列化器（完整版）"""
     author_info = serializers.SerializerMethodField()
     event_info = serializers.SerializerMethodField()
+    image = serializers.CharField(source='cover_image', read_only=True, allow_null=True)
 
     class Meta:
         model = Announcement
         fields = [
-            'id', 'title', 'content', 'announcement_type', 'priority',
-            'event', 'event_info', 'cover_image', 'attachments', 'author',
+            'id', 'title', 'content', 'summary', 'announcement_type', 'priority',
+            'event', 'event_info', 'cover_image', 'image', 'attachments', 'author',
             'author_info', 'is_published', 'is_pinned', 'view_count',
             'publish_time', 'expire_time', 'created_at', 'updated_at'
         ]

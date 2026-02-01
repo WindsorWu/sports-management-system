@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { getToken } from '@/utils/auth'
 import { ElMessage } from 'element-plus'
+import store from '@/store'
 
 const routes = [
   // 前台路由
@@ -137,40 +138,48 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
-  // 设置页面标题
-  document.title = to.meta.title ? `${to.meta.title} - 体育赛事管理系统` : '体育赛事管理系统'
+router.beforeEach(async (to, from, next) => {
+   // 设置页面标题
+   document.title = to.meta.title ? `${to.meta.title} - 体育赛事管理系统` : '体育赛事管理系统'
 
-  const token = getToken()
-  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+   const token = getToken()
+   let userInfo = store.state.user.userInfo || {}
 
-  // 需要登录的页面
-  if (to.meta.requiresAuth) {
-    if (!token) {
-      ElMessage.warning('请先登录')
-      next({
-        path: '/login',
-        query: { redirect: to.fullPath }
-      })
-      return
-    }
+   // 需要登录的页面
+   if (to.meta.requiresAuth) {
+     if (!token) {
+       ElMessage.warning('请先登录')
+       next({
+         path: '/login',
+         query: { redirect: to.fullPath }
+       })
+       return
+     }
 
-    // 需要管理员权限
-    if (to.meta.requiresAdmin && !userInfo.is_superuser) {
-      ElMessage.error('没有访问权限')
-      next('/')
-      return
-    }
-  }
+     if (!userInfo.username && token) {
+       try {
+         userInfo = await store.dispatch('user/getUserInfo')
+       } catch (error) {
+         userInfo = store.state.user.userInfo || {}
+       }
+     }
 
-  // 已登录用户访问登录页，重定向到首页
-  // 但只有在有userInfo的情况下才重定向（确保token有效）
-  if ((to.path === '/login' || to.path === '/register') && token && userInfo.username) {
-    next('/')
-    return
-  }
+     // 需要管理员/裁判权限
+     if (to.meta.requiresAdmin && !userInfo.is_staff) {
+       ElMessage.error('没有访问权限')
+       next('/')
+       return
+     }
+   }
 
-  next()
-})
+   // 已登录用户访问登录页，重定向到首页
+   // 但只有在有userInfo的情况下才重定向（确保token有效）
+   if ((to.path === '/login' || to.path === '/register') && token && userInfo.username) {
+     next('/')
+     return
+   }
+
+   next()
+ })
 
 export default router

@@ -8,6 +8,9 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.contrib.contenttypes.models import ContentType
+from rest_framework.exceptions import ValidationError
+import logging
+from django.db import IntegrityError
 
 from .models import Like, Favorite, Comment
 from .serializers import (
@@ -17,6 +20,35 @@ from .serializers import (
     CommentCreateSerializer
 )
 from utils.permissions import IsOwnerOrAdmin, IsAdmin
+
+
+logger = logging.getLogger(__name__)
+
+
+def normalize_interaction_payload(data):
+    payload = data.copy()
+    target_type = payload.pop('target_type', None)
+    target_id = payload.pop('target_id', None)
+
+    if 'content_type' not in payload:
+        if not target_type:
+            raise ValidationError({'content_type': 'content_type 或 target_type 必须提供'})
+        model_name = target_type.split('.')[-1].lower()
+        try:
+            content_type = ContentType.objects.get(model=model_name)
+        except ContentType.DoesNotExist:
+            raise ValidationError({'target_type': '无效的 target_type'})
+        payload['content_type'] = content_type.id
+
+    if 'object_id' not in payload:
+        if target_id is None:
+            raise ValidationError({'object_id': 'object_id 或 target_id 必须提供'})
+        try:
+            payload['object_id'] = int(target_id)
+        except (TypeError, ValueError):
+            raise ValidationError({'target_id': 'target_id 必须是整数'})
+
+    return payload
 
 
 class LikeViewSet(viewsets.ModelViewSet):
@@ -36,8 +68,9 @@ class LikeViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         """点赞"""
-        content_type_id = request.data.get('content_type')
-        object_id = request.data.get('object_id')
+        payload = normalize_interaction_payload(request.data)
+        content_type_id = payload.get('content_type')
+        object_id = payload.get('object_id')
 
         # 检查是否已经点赞
         if Like.objects.filter(
@@ -49,7 +82,7 @@ class LikeViewSet(viewsets.ModelViewSet):
                 'error': '您已经点赞过了'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(data=payload)
         serializer.is_valid(raise_exception=True)
         like = serializer.save()
 
@@ -65,8 +98,9 @@ class LikeViewSet(viewsets.ModelViewSet):
         POST /api/interactions/likes/unlike/
         Body: {content_type: id, object_id: id}
         """
-        content_type_id = request.data.get('content_type')
-        object_id = request.data.get('object_id')
+        payload = normalize_interaction_payload(request.data)
+        content_type_id = payload.get('content_type')
+        object_id = payload.get('object_id')
 
         like = Like.objects.filter(
             user=request.user,
@@ -91,13 +125,11 @@ class LikeViewSet(viewsets.ModelViewSet):
         检查是否已点赞
         GET /api/interactions/likes/check/?content_type={id}&object_id={id}
         """
-        content_type_id = request.query_params.get('content_type')
-        object_id = request.query_params.get('object_id')
-
+        payload = normalize_interaction_payload(request.query_params)
         liked = Like.objects.filter(
             user=request.user,
-            content_type_id=content_type_id,
-            object_id=object_id
+            content_type_id=payload.get('content_type'),
+            object_id=payload.get('object_id')
         ).exists()
 
         return Response({
@@ -123,8 +155,9 @@ class FavoriteViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         """收藏"""
-        content_type_id = request.data.get('content_type')
-        object_id = request.data.get('object_id')
+        payload = normalize_interaction_payload(request.data)
+        content_type_id = payload.get('content_type')
+        object_id = payload.get('object_id')
 
         # 检查是否已经收藏
         if Favorite.objects.filter(
@@ -136,9 +169,20 @@ class FavoriteViewSet(viewsets.ModelViewSet):
                 'error': '您已经收藏过了'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(data=payload)
         serializer.is_valid(raise_exception=True)
-        favorite = serializer.save()
+        try:
+            favorite = serializer.save()
+        except IntegrityError:
+            logger.warning('Favorite duplicated? user=%s payload=%s', request.user.id, payload)
+            return Response({
+                'error': '您已经收藏过了'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:
+            logger.exception('收藏过程中出错 user=%s payload=%s', request.user.id, payload)
+            return Response({
+                'error': '收藏失败，请稍后再试'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({
             'message': '收藏成功',
@@ -152,8 +196,9 @@ class FavoriteViewSet(viewsets.ModelViewSet):
         POST /api/interactions/favorites/unfavorite/
         Body: {content_type: id, object_id: id}
         """
-        content_type_id = request.data.get('content_type')
-        object_id = request.data.get('object_id')
+        payload = normalize_interaction_payload(request.data)
+        content_type_id = payload.get('content_type')
+        object_id = payload.get('object_id')
 
         favorite = Favorite.objects.filter(
             user=request.user,
@@ -178,13 +223,11 @@ class FavoriteViewSet(viewsets.ModelViewSet):
         检查是否已收藏
         GET /api/interactions/favorites/check/?content_type={id}&object_id={id}
         """
-        content_type_id = request.query_params.get('content_type')
-        object_id = request.query_params.get('object_id')
-
+        payload = normalize_interaction_payload(request.query_params)
         favorited = Favorite.objects.filter(
             user=request.user,
-            content_type_id=content_type_id,
-            object_id=object_id
+            content_type_id=payload.get('content_type'),
+            object_id=payload.get('object_id')
         ).exists()
 
         return Response({
@@ -236,7 +279,8 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         """创建评论"""
-        serializer = self.get_serializer(data=request.data)
+        payload = normalize_interaction_payload(request.data)
+        serializer = self.get_serializer(data=payload)
         serializer.is_valid(raise_exception=True)
         comment = serializer.save()
 

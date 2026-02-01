@@ -56,6 +56,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """创建用户"""
         validated_data.pop('password_confirm')
+        validated_data['is_staff'] = validated_data.get('user_type') == 'referee'
         user = User.objects.create_user(**validated_data)
         return user
 
@@ -69,11 +70,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'real_name', 'phone', 'user_type',
             'avatar', 'gender', 'birth_date', 'id_card', 'emergency_contact',
             'emergency_phone', 'organization', 'bio', 'is_verified',
-            'is_active', 'is_superuser', 'date_joined', 'created_at', 'updated_at'
+            'is_active', 'is_superuser', 'is_staff',
+            'date_joined', 'created_at', 'updated_at'
         ]
         read_only_fields = [
             'id', 'username', 'is_verified', 'is_active', 'is_superuser',
-            'date_joined', 'created_at', 'updated_at'
+            'is_staff', 'date_joined', 'created_at', 'updated_at'
         ]
 
 

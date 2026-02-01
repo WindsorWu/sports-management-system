@@ -38,7 +38,7 @@ export function createAnnouncement(data) {
 export function updateAnnouncement(id, data) {
   return request({
     url: `/announcements/${id}/`,
-    method: 'put',
+    method: 'patch',
     data
   })
 }

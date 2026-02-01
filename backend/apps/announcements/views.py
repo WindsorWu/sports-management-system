@@ -8,6 +8,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.utils import timezone
+import os
+import uuid
+from datetime import datetime
+from django.conf import settings
 
 from .models import Announcement
 from .serializers import (
@@ -42,6 +46,9 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
         elif self.action in ['update', 'partial_update', 'destroy']:
             # 更新和删除需要是所有者或管理员
             permission_classes = [IsOwnerOrAdmin]
+        elif self.action == 'upload_image':
+            # 上传图片需要管理员权限
+            permission_classes = [IsAdmin]
         else:
             # 其他操作需要管理员权限
             permission_classes = [IsAdmin]
@@ -111,7 +118,7 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
         serializer = AnnouncementListSerializer(announcements, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['put'])
+    @action(detail=True, methods=['put', 'post'])
     def publish(self, request, pk=None):
         """
         发布公告
@@ -171,6 +178,51 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
         return Response({
             'message': '公告已取消置顶',
             'announcement': AnnouncementSerializer(announcement).data
+        })
+
+    @action(detail=False, methods=['post'])
+    def upload_image(self, request):
+        """
+        上传公告封面图片到前端public目录
+        POST /api/announcements/upload_image/
+        """
+        # el-upload 默认使用 'file' 字段名
+        if 'file' not in request.FILES and 'image' not in request.FILES:
+            return Response({
+                'error': '请上传图片文件'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        image_file = request.FILES.get('file') or request.FILES.get('image')
+
+        allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+        if image_file.content_type not in allowed_types:
+            return Response({
+                'error': '只支持 jpg, png, gif, webp 格式的图片'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if image_file.size > 5 * 1024 * 1024:
+            return Response({
+                'error': '图片大小不能超过 5MB'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        random_str = str(uuid.uuid4())[:8]
+        extension = image_file.name.split('.')[-1]
+        filename = f'announcement_{timestamp}_{random_str}.{extension}'
+
+        frontend_public_dir = os.path.join(settings.BASE_DIR, '..', 'frontend', 'public', 'images', 'announcements')
+        os.makedirs(frontend_public_dir, exist_ok=True)
+
+        file_path = os.path.join(frontend_public_dir, filename)
+        with open(file_path, 'wb+') as destination:
+            for chunk in image_file.chunks():
+                destination.write(chunk)
+
+        relative_path = f'/images/announcements/{filename}'
+
+        return Response({
+            'message': '图片上传成功',
+            'image': relative_path
         })
 
 

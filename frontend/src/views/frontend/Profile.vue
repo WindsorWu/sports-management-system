@@ -402,7 +402,7 @@ const loadFavorites = async () => {
   loading.favorites = true
   try {
     const data = await getMyFavorites()
-    favorites.value = data
+    favorites.value = data.results || data || []
   } catch (error) {
     ElMessage.error(error.message || '加载收藏列表失败')
   } finally {

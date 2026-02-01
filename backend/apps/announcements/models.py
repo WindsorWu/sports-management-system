@@ -25,6 +25,12 @@ class Announcement(models.Model):
     content = models.TextField(
         verbose_name='公告内容'
     )
+    summary = models.CharField(
+        max_length=200,
+        blank=True,
+        default='',
+        verbose_name='摘要'
+    )
     announcement_type = models.CharField(
         max_length=20,
         choices=TYPE_CHOICES,

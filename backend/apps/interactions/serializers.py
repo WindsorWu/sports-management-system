@@ -30,12 +30,19 @@ class FavoriteSerializer(serializers.ModelSerializer):
     """收藏序列化器"""
     user_name = serializers.CharField(source='user.real_name', read_only=True)
     content_type_name = serializers.SerializerMethodField()
+    object_id = serializers.IntegerField(write_only=True)
+    target_id = serializers.IntegerField(source='object_id', read_only=True)
+    event_name = serializers.SerializerMethodField()
+    event_image = serializers.SerializerMethodField()
+    event_type = serializers.SerializerMethodField()
+    event_start_time = serializers.SerializerMethodField()
 
     class Meta:
         model = Favorite
         fields = [
             'id', 'user', 'user_name', 'content_type', 'content_type_name',
-            'object_id', 'remarks', 'created_at'
+            'object_id', 'target_id', 'event_name', 'event_image', 'event_type',
+            'event_start_time', 'remarks', 'created_at'
         ]
         read_only_fields = ['id', 'user', 'created_at', 'user_name', 'content_type_name']
 
@@ -47,6 +54,25 @@ class FavoriteSerializer(serializers.ModelSerializer):
         """创建收藏"""
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
+
+    def get_event_name(self, obj):
+        """获取事件名称"""
+        return getattr(obj.content_object, 'title', None)
+
+    def get_event_image(self, obj):
+        """获取事件图片"""
+        image_field = getattr(obj.content_object, 'cover_image', None)
+        if not image_field:
+            return None
+        return image_field.url if hasattr(image_field, 'url') else image_field
+
+    def get_event_type(self, obj):
+        """获取事件类型"""
+        return getattr(obj.content_object, 'event_type', None)
+
+    def get_event_start_time(self, obj):
+        """获取事件开始时间"""
+        return getattr(obj.content_object, 'start_time', None)
 
 
 class CommentSerializer(serializers.ModelSerializer):
