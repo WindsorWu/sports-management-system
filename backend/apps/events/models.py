@@ -208,3 +208,31 @@ class EventAssignment(models.Model):
 
     def __str__(self):
         return f"{self.event.title} - {self.referee.real_name} - {self.get_round_type_display()}"
+
+
+class RefereeEventAccess(models.Model):
+    """裁判-赛事访问关系"""
+    referee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='assigned_events',
+        limit_choices_to={'user_type': 'referee'},
+        verbose_name='裁判'
+    )
+    event = models.ForeignKey(
+        'Event',
+        on_delete=models.CASCADE,
+        related_name='referee_accesses',
+        verbose_name='赛事'
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+
+    class Meta:
+        db_table = 'referee_event_access'
+        verbose_name = '裁判赛事访问'
+        verbose_name_plural = verbose_name
+        unique_together = ('referee', 'event')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.referee.username} -> {self.event.title}"

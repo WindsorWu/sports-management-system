@@ -99,7 +99,8 @@ import {
   ChatDotRound,
   HomeFilled,
   ArrowDown,
-  SwitchButton
+  SwitchButton,
+  Ticket
 } from '@element-plus/icons-vue'
 
 const store = useStore()
@@ -151,6 +152,7 @@ const allMenuItems = [
   { index: '/admin/events', label: '赛事管理', icon: Trophy, allowedRoles: ['admin'] },
   { index: '/admin/registrations', label: '报名管理', icon: Document, allowedRoles: ['admin'] },
   { index: '/admin/results', label: '成绩管理', icon: Medal, allowedRoles: ['admin', 'referee'] },
+  { index: '/admin/referees', label: '裁判管理', icon: Ticket, allowedRoles: ['admin'] },
   { index: '/admin/announcements', label: '公告管理', icon: Bell, allowedRoles: ['admin'] },
   { index: '/admin/carousels', label: '轮播图管理', icon: Picture, allowedRoles: ['admin'] },
   { index: '/admin/feedback', label: '反馈管理', icon: ChatDotRound, allowedRoles: ['admin'] }

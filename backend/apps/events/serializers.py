@@ -2,7 +2,7 @@
 赛事应用序列化器
 """
 from rest_framework import serializers
-from .models import Event, EventAssignment
+from .models import Event, EventAssignment, RefereeEventAccess
 from apps.interactions.models import Favorite
 
 
@@ -241,3 +241,15 @@ class EventAssignmentSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['assigned_by'] = self.context['request'].user
         return super().create(validated_data)
+
+
+class RefereeEventAccessSerializer(serializers.ModelSerializer):
+    """裁判赛事访问序列化器"""
+    referee_name = serializers.CharField(source='referee.real_name', read_only=True)
+    referee_username = serializers.CharField(source='referee.username', read_only=True)
+    event_title = serializers.CharField(source='event.title', read_only=True)
+
+    class Meta:
+        model = RefereeEventAccess
+        fields = ['id', 'referee', 'referee_name', 'referee_username', 'event', 'event_title']
+        read_only_fields = ['id', 'referee_name', 'referee_username', 'event_title']

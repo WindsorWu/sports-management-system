@@ -8,11 +8,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Case, When, IntegerField
+from rest_framework.exceptions import PermissionDenied
 
 from .models import Result
 from .serializers import ResultSerializer, ResultCreateSerializer, ResultListSerializer
 from utils.permissions import IsAdmin, IsAdminOrReferee
 from utils.export import export_results
+from apps.events.models import RefereeEventAccess
 
 
 class ResultViewSet(viewsets.ModelViewSet):
@@ -52,15 +54,31 @@ class ResultViewSet(viewsets.ModelViewSet):
             return ResultListSerializer
         return ResultSerializer
 
+    def get_referee_event_ids(self, user):
+        if not (user and user.is_authenticated and user.user_type == 'referee'):
+            return None
+        return list(RefereeEventAccess.objects.filter(referee=user).values_list('event_id', flat=True))
+
+    def apply_referee_filter(self, queryset, user):
+        referee_ids = self.get_referee_event_ids(user)
+        if referee_ids is None:
+            return queryset
+        return queryset.filter(event_id__in=referee_ids)
+
     def get_queryset(self):
         """普通用户只能看到已公开的成绩"""
         user = self.request.user
         if user.is_authenticated and (user.is_superuser or user.user_type in ['admin', 'organizer']):
             return self.queryset
-        return self.queryset.filter(is_published=True)
+        base = self.queryset.filter(is_published=True)
+        return self.apply_referee_filter(base, user)
 
     def create(self, request, *args, **kwargs):
         """创建成绩"""
+        referee_events = self.get_referee_event_ids(request.user)
+        event_id = request.data.get('event')
+        if referee_events is not None and event_id and int(event_id) not in referee_events:
+            raise PermissionDenied('该裁判未被分配该赛事')
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         result = serializer.save()
@@ -110,6 +128,7 @@ class ResultViewSet(viewsets.ModelViewSet):
         round_type = request.query_params.get('round_type')
 
         queryset = Result.objects.select_related('event', 'user', 'registration').all()
+        queryset = self.apply_referee_filter(queryset, request.user)
 
         if event_id:
             queryset = queryset.filter(event_id=event_id)
@@ -142,7 +161,7 @@ class ResultViewSet(viewsets.ModelViewSet):
                 'error': '请提供赛事ID'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        results = self.queryset.filter(
+        results = self.apply_referee_filter(self.queryset, request.user).filter(
             event_id=event_id,
             round_type=round_type,
             is_published=True
@@ -162,10 +181,11 @@ class ResultViewSet(viewsets.ModelViewSet):
                 'error': '请先登录'
             }, status=status.HTTP_401_UNAUTHORIZED)
 
-        results = Result.objects.filter(
+        base_results = Result.objects.filter(
             user=request.user,
             is_published=True
         ).select_related('event', 'registration')
+        results = self.apply_referee_filter(base_results, request.user)
 
         serializer = ResultSerializer(results, many=True)
         return Response(serializer.data)

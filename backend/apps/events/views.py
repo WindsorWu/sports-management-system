@@ -4,16 +4,17 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.exceptions import PermissionDenied
 from django.utils import timezone
 from django.db.models import Q
+from django.db import transaction
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from .models import Event, EventAssignment
-from .serializers import EventSerializer, EventListSerializer, EventDetailSerializer, EventAssignmentSerializer
-from utils.permissions import IsAdmin, IsOwnerOrAdmin, IsAuthenticatedOrReadOnly, IsAdminOrReferee
+from .models import Event, EventAssignment, RefereeEventAccess
+from .serializers import EventSerializer, EventListSerializer, EventDetailSerializer, EventAssignmentSerializer, RefereeEventAccessSerializer
+from utils.permissions import IsAdmin, IsOwnerOrAdmin, IsAuthenticatedOrReadOnly, IsAdminOrReferee, IsSuperAdminOrAdminRole
 from utils.export import export_results
 
 
@@ -289,3 +290,50 @@ class EventAssignmentViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         self.ensure_admin()
         return super().destroy(request, *args, **kwargs)
+
+
+class RefereeEventAccessViewSet(viewsets.GenericViewSet):
+    """裁判赛事管理"""
+    queryset = RefereeEventAccess.objects.select_related('referee', 'event').all()
+    serializer_class = RefereeEventAccessSerializer
+    permission_classes = [IsSuperAdminOrAdminRole]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['referee']
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['post'])
+    def assign(self, request):
+        """为某个裁判更新可访问赛事"""
+        referee_id = request.data.get('referee')
+        event_ids = request.data.get('event_ids', [])
+        if not referee_id:
+            return Response({'error': '请提供裁判ID'}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(event_ids, list):
+            return Response({'error': 'event_ids 必须是数组'}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            RefereeEventAccess.objects.filter(referee_id=referee_id).exclude(event_id__in=event_ids).delete()
+            existing_ids = set(RefereeEventAccess.objects.filter(referee_id=referee_id).values_list('event_id', flat=True))
+            to_create = [RefereeEventAccess(referee_id=referee_id, event_id=event_id) for event_id in event_ids if event_id not in existing_ids]
+            RefereeEventAccess.objects.bulk_create(to_create)
+
+        queryset = RefereeEventAccess.objects.filter(referee_id=referee_id).select_related('event')
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def my_events(self, request):
+        """返回当前裁判可以访问的赛事"""
+        user = request.user
+        if not user.is_authenticated or user.user_type != 'referee':
+            return Response([], status=status.HTTP_200_OK)
+
+        accesses = RefereeEventAccess.objects.filter(referee=user).select_related('event')
+        events = [access.event for access in accesses]
+        serializer = EventListSerializer(events, many=True, context={'request': request})
+        return Response(serializer.data)
+

@@ -113,7 +113,13 @@ const routes = [
         name: 'AdminFeedback',
         component: () => import('@/views/admin/Feedback.vue'),
         meta: { title: '反馈管理', allowedRoles: ['admin'] }
-      }
+      },
+      {
+        path: 'referees',
+        name: 'AdminReferees',
+        component: () => import('@/views/admin/RefereeManagement.vue'),
+        meta: { title: '裁判管理', allowedRoles: ['admin'] }
+      },
     ]
   },
   // 404页面

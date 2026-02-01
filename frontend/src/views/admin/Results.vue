@@ -237,15 +237,19 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useStore } from 'vuex'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Warning } from '@element-plus/icons-vue'
 import { getResultList, createResult, updateResult, patchResult, deleteResult, publishResult, exportResults } from '@/api/result'
 import { getEventList, getEventRegistrations } from '@/api/event'
-import { getUserList, getUserDetail } from '@/api/user'
+import { getMyRefereeEvents } from '@/api/referee'
 
 // 搜索和筛选
 const searchQuery = ref('')
 const eventFilter = ref('')
+
+const store = useStore()
+const isReferee = computed(() => store.state.user.userInfo?.user_type === 'referee')
 
 // 成绩列表
 const results = ref([])
@@ -336,13 +340,12 @@ const fetchResults = async () => {
 // 获取赛事列表
 const fetchEvents = async () => {
   try {
-    // 获取所有赛事
-    const response = await getEventList({ page_size: 1000 })
-    // 过滤出进行中和已结束的赛事（比赛已开始）
-    eventList.value = (response.results || []).filter(event => {
-      const now = new Date()
+    const allEvents = isReferee.value
+      ? await getMyRefereeEvents()
+      : (await getEventList({ page_size: 1000 })).results || []
+    const now = new Date()
+    eventList.value = (allEvents || []).filter(event => {
       const startTime = new Date(event.start_time)
-      // 只显示比赛已开始的赛事（进行中或已结束）
       return now >= startTime
     })
 

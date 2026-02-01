@@ -63,3 +63,13 @@ class IsAuthenticatedOrReadOnly(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
         return request.user and request.user.is_authenticated
+
+
+class IsSuperAdminOrAdminRole(permissions.BasePermission):
+    """超级管理员或 admin 角色"""
+
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and (
+            request.user.is_superuser or request.user.user_type == 'admin'
+        )
+
