@@ -292,7 +292,7 @@ class EventAssignmentViewSet(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
 
-class RefereeEventAccessViewSet(viewsets.GenericViewSet):
+class RefereeEventAccessViewSet(viewsets.ModelViewSet):
     """裁判赛事管理"""
     queryset = RefereeEventAccess.objects.select_related('referee', 'event').all()
     serializer_class = RefereeEventAccessSerializer
