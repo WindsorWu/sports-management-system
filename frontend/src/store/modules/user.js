@@ -65,6 +65,7 @@ export default {
     token: state => state.token,
     userInfo: state => state.userInfo,
     isLogin: state => !!state.token,
-    isAdmin: state => state.userInfo.role === 'admin'
+    isAdmin: state => state.userInfo?.user_type === 'admin',
+    isStaff: state => !!state.userInfo?.is_staff
   }
 }

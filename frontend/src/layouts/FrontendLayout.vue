@@ -34,7 +34,7 @@
                     <el-dropdown-item command="profile">
                       <el-icon><User /></el-icon>个人中心
                     </el-dropdown-item>
-                    <el-dropdown-item command="admin" v-if="isAdmin">
+                    <el-dropdown-item command="admin" v-if="isStaff">
                       <el-icon><Setting /></el-icon>管理后台
                     </el-dropdown-item>
                     <el-dropdown-item divided command="logout">
@@ -83,7 +83,7 @@ const router = useRouter()
 const route = useRoute()
 
 const isLogin = computed(() => store.getters['user/isLogin'])
-const isAdmin = computed(() => store.getters['user/isAdmin'])
+const isStaff = computed(() => store.getters['user/isStaff'])
 const userInfo = computed(() => store.getters['user/userInfo'])
 const activeMenu = computed(() => route.path)
 
