@@ -45,6 +45,9 @@ class EventViewSet(viewsets.ModelViewSet):
         elif self.action == 'registrations':
             # 报名列表需管理员或裁判
             permission_classes = [IsAdminOrReferee]
+        elif self.action == 'referee_access':
+            # 裁判权限管理需超级管理员或管理员角色
+            permission_classes = [IsSuperAdminOrAdminRole]
         elif self.action in ['update', 'partial_update', 'destroy']:
             # 更新和删除需要是所有者或管理员
             permission_classes = [IsOwnerOrAdmin]
@@ -229,6 +232,21 @@ class EventViewSet(viewsets.ModelViewSet):
 
         from apps.announcements.serializers import AnnouncementSerializer
         serializer = AnnouncementSerializer(announcements, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='referee-access')
+    def referee_access(self, request):
+        """
+        获取裁判访问权限列表，解决路由冲突问题
+        GET /api/events/referee-access/?referee=9
+        """
+        referee_id = request.query_params.get('referee')
+        queryset = RefereeEventAccess.objects.select_related('referee', 'event').all()
+
+        if referee_id:
+            queryset = queryset.filter(referee_id=referee_id)
+
+        serializer = RefereeEventAccessSerializer(queryset, many=True)
         return Response(serializer.data)
 
     def get_queryset(self):
