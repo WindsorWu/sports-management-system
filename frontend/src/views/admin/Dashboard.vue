@@ -36,7 +36,7 @@
           </div>
         </el-card>
       </el-col>
-      <el-col :xs="12" :sm="12" :md="6" :lg="6">
+      <el-col :xs="12" :sm="12" :md="6" :lg="6" v-if="!isReferee">
         <el-card class="stat-card stat-card-3">
           <div class="stat-content">
             <div class="stat-icon">
@@ -65,7 +65,7 @@
     </el-row>
 
     <!-- 图表展示 -->
-    <el-row :gutter="20" class="charts-row">
+    <el-row :gutter="20" class="charts-row" v-if="!isReferee">
       <el-col :xs="24" :sm="24" :md="12" :lg="12">
         <el-card>
           <template #header>
@@ -94,7 +94,7 @@
     </el-row>
 
     <!-- 待审核报名列表 -->
-    <el-card class="pending-registrations">
+    <el-card class="pending-registrations" v-if="!isReferee">
       <template #header>
         <div class="card-header">
           <span>待审核报名</span>
@@ -202,6 +202,9 @@ const registrationTrendChart = ref(null)
 const eventStatusChart = ref(null)
 let trendChartInstance = null
 let statusChartInstance = null
+
+// 判断当前用户是否为裁判
+const isReferee = computed(() => userInfo.value?.user_type === 'referee')
 
 // 获取统计数据
 const fetchStats = async () => {

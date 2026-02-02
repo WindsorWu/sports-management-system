@@ -6,8 +6,8 @@
         <span class="status" :class="statusLevel">{{ statusMessage }}</span>
       </div>
     </template>
-    <p class="subtitle">自动从赛事评论中抽取 a+n / v+n 搭配，绑定报名趋势图数据旁展示</p>
-    <div class="wordcloud-wrapper" ref="wordcloudRef">
+    <div class="wordcloud-wrapper">
+      <div ref="wordcloudRef" class="wordcloud-canvas"></div>
       <div v-if="!hasData" class="placeholder">等待实时词云数据...</div>
     </div>
     <p v-if="errorMessage" class="error-tip">{{ errorMessage }}</p>
@@ -177,6 +177,12 @@ onBeforeUnmount(() => destroySocket())
   position: relative;
   overflow: hidden;
   min-height: 260px;
+}
+.wordcloud-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 .placeholder {
   position: absolute;
