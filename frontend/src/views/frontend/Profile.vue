@@ -503,7 +503,12 @@ const handleChangePassword = async () => {
     await passwordFormRef.value.validate()
     submitting.value = true
 
-    await changePassword(passwordForm)
+    const payload = {
+      old_password: passwordForm.old_password,
+      new_password: passwordForm.new_password,
+      new_password_confirm: passwordForm.new_password_confirm
+    }
+    await changePassword(payload)
 
     ElMessage.success('修改密码成功，请重新登录')
     showPasswordDialog.value = false
@@ -515,7 +520,12 @@ const handleChangePassword = async () => {
     }, 1500)
   } catch (error) {
     if (error !== false) {
-      ElMessage.error(error.message || '修改密码失败')
+      const message = error.response?.data?.detail
+        || error.response?.data?.message
+        || Object.values(error.response?.data || {}).flat().join(', ')
+        || error.message
+        || '修改密码失败'
+      ElMessage.error(message)
     }
   } finally {
     submitting.value = false
