@@ -30,6 +30,7 @@
               v-if="row.image"
               :src="row.image"
               :preview-src-list="[row.image]"
+              :preview-teleported="true"
               fit="cover"
               style="width: 160px; height: 60px; border-radius: 4px;"
             />
