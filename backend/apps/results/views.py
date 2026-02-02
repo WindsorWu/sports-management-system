@@ -193,7 +193,9 @@ class ResultViewSet(viewsets.ModelViewSet):
 
     def get_pending_results_count(self, event_ids=None):
         queryset = Result.objects.select_related('event', 'registration')
-        recorded_ids = set(queryset.filter(event_id__in=event_ids).values_list('registration_id', flat=True)) if event_ids else set()
+        if event_ids:
+            queryset = queryset.filter(event_id__in=event_ids)
+        recorded_ids = set(queryset.values_list('registration_id', flat=True))
         reg_queryset = Registration.objects.filter(status='approved')
         if event_ids:
             reg_queryset = reg_queryset.filter(event_id__in=event_ids)
