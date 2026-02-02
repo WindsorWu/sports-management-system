@@ -84,7 +84,7 @@ export function getUserDetail(id) {
 export function updateUser(id, data) {
   return request({
     url: `/users/${id}/`,
-    method: 'put',
+    method: 'patch',
     data
   })
 }

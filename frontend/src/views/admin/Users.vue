@@ -97,6 +97,14 @@
               详情
             </el-button>
             <el-button
+              type="info"
+              size="small"
+              @click="handleOpenEdit(row)"
+              :disabled="row.is_superuser"
+            >
+              编辑
+            </el-button>
+            <el-button
               type="danger"
               size="small"
               @click="handleDelete(row)"
@@ -134,10 +142,6 @@
         <el-descriptions-item label="邮箱">{{ currentUser.email || '-' }}</el-descriptions-item>
         <el-descriptions-item label="姓名">{{ currentUser.real_name || '-' }}</el-descriptions-item>
         <el-descriptions-item label="手机号">{{ currentUser.phone || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="性别">
-          {{ getGenderText(currentUser.gender) }}
-        </el-descriptions-item>
-        <el-descriptions-item label="出生日期">{{ currentUser.birth_date || '-' }}</el-descriptions-item>
         <el-descriptions-item label="用户类型">
           <el-tag v-if="currentUser.user_type === 'admin'" type="danger">管理员</el-tag>
           <el-tag v-else-if="currentUser.user_type === 'athlete'" type="success">运动员</el-tag>
@@ -158,13 +162,46 @@
         <el-descriptions-item label="注册时间" :span="2">
           {{ formatDateTime(currentUser.date_joined) }}
         </el-descriptions-item>
-        <el-descriptions-item label="个人简介" :span="2">
-          {{ currentUser.bio || '-' }}
-        </el-descriptions-item>
       </el-descriptions>
 
       <template #footer>
         <el-button @click="detailDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑用户对话框 -->
+    <el-dialog
+      v-model="editDialogVisible"
+      title="编辑用户"
+      width="600px"
+      @close="handleEditDialogClose"
+    >
+      <el-form
+        :model="editForm"
+        :rules="editFormRules"
+        ref="editFormRef"
+        label-width="100px"
+        class="edit-form"
+      >
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="editForm.username" placeholder="请输入用户名" />
+        </el-form-item>
+        <el-form-item label="姓名" prop="real_name">
+          <el-input v-model="editForm.real_name" placeholder="请输入姓名" />
+        </el-form-item>
+        <el-form-item label="邮箱" prop="email">
+          <el-input v-model="editForm.email" placeholder="请输入邮箱" />
+        </el-form-item>
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="editForm.phone" placeholder="请输入手机号" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleEditSubmit" :loading="editLoading">
+          保存
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -174,7 +211,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
-import { getUserList, getUserDetail, deleteUser, activateUser, deactivateUser } from '@/api/user'
+import { getUserList, getUserDetail, deleteUser, activateUser, deactivateUser, updateUser } from '@/api/user'
 
 // 搜索和筛选
 const searchQuery = ref('')
@@ -193,6 +230,25 @@ const total = ref(0)
 // 详情对话框
 const detailDialogVisible = ref(false)
 const currentUser = ref(null)
+const editDialogVisible = ref(false)
+const editFormRef = ref(null)
+const editLoading = ref(false)
+const editingUser = ref(null)
+const editForm = reactive({
+  username: '',
+  real_name: '',
+  email: '',
+  phone: ''
+})
+const editFormRules = {
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  real_name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+  email: [{ required: true, type: 'email', message: '请输入有效的邮箱', trigger: 'blur' }],
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+  ]
+}
 
 // 获取用户列表
 const fetchUsers = async () => {
@@ -299,6 +355,57 @@ const handleStatusChange = async (user) => {
   }
 }
 
+// 编辑用户
+const handleOpenEdit = async (user) => {
+  try {
+    const response = await getUserDetail(user.id)
+    editingUser.value = response
+    editForm.username = response.username
+    editForm.real_name = response.real_name
+    editForm.email = response.email
+    editForm.phone = response.phone
+    editDialogVisible.value = true
+  } catch (error) {
+    console.error('获取用户详情失败:', error)
+    ElMessage.error('获取用户详情失败')
+  }
+}
+
+// 提交编辑
+const handleEditSubmit = async () => {
+  try {
+    await editFormRef.value.validate()
+
+    editLoading.value = true
+    await updateUser(editingUser.value.id, editForm)
+    ElMessage.success('用户信息更新成功')
+
+    editDialogVisible.value = false
+    fetchUsers()
+    resetEditForm()
+  } catch (error) {
+    console.error('更新用户信息失败:', error)
+    ElMessage.error('更新用户信息失败')
+  } finally {
+    editLoading.value = false
+  }
+}
+
+// 关闭编辑对话框
+const handleEditDialogClose = () => {
+  editDialogVisible.value = false
+  editingUser.value = null
+  resetEditForm()
+}
+
+const resetEditForm = () => {
+  editForm.username = ''
+  editForm.real_name = ''
+  editForm.email = ''
+  editForm.phone = ''
+  editFormRef.value?.clearValidate()
+}
+
 // 格式化日期时间
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '-'
@@ -310,15 +417,6 @@ const formatDateTime = (dateStr) => {
     hour: '2-digit',
     minute: '2-digit'
   })
-}
-
-// 获取性别文本
-const getGenderText = (gender) => {
-  const genderMap = {
-    M: '男',
-    F: '女'
-  }
-  return genderMap[gender] || '-'
 }
 
 onMounted(() => {
@@ -349,6 +447,10 @@ onMounted(() => {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+}
+
+.edit-form {
+  margin-top: 10px;
 }
 
 @media (max-width: 768px) {
