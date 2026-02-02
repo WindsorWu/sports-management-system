@@ -1,14 +1,14 @@
-<template>
+﻿<template>
   <div class="dashboard-container">
-    <!-- 欢迎信息 -->
+    <!-- 娆㈣繋淇℃伅 -->
     <el-card class="welcome-card">
       <div class="welcome-content">
-        <h2>欢迎，{{ userInfo?.username || '管理员' }}！</h2>
+        <h2>娆㈣繋锛寋{ userInfo?.username || '绠＄悊鍛? }}锛?/h2>
         <p>{{ currentTime }}</p>
       </div>
     </el-card>
 
-    <!-- 统计卡片 -->
+    <!-- 缁熻鍗＄墖 -->
     <el-row :gutter="20" class="stats-row">
       <el-col :xs="12" :sm="12" :md="6" :lg="6">
         <el-card class="stat-card stat-card-1">
@@ -18,7 +18,7 @@
             </div>
             <div class="stat-info">
               <div class="stat-value">{{ stats.usersCount }}</div>
-              <div class="stat-label">用户总数</div>
+              <div class="stat-label">鐢ㄦ埛鎬绘暟</div>
             </div>
           </div>
         </el-card>
@@ -31,7 +31,7 @@
             </div>
             <div class="stat-info">
               <div class="stat-value">{{ stats.eventsCount }}</div>
-              <div class="stat-label">赛事总数</div>
+              <div class="stat-label">璧涗簨鎬绘暟</div>
             </div>
           </div>
         </el-card>
@@ -44,7 +44,7 @@
             </div>
             <div class="stat-info">
               <div class="stat-value">{{ stats.registrationsCount }}</div>
-              <div class="stat-label">报名总数</div>
+              <div class="stat-label">鎶ュ悕鎬绘暟</div>
             </div>
           </div>
         </el-card>
@@ -57,35 +57,30 @@
             </div>
             <div class="stat-info">
               <div class="stat-value">{{ stats.resultsCount }}</div>
-              <div class="stat-label">成绩总数</div>
+              <div class="stat-label">鎴愮哗鎬绘暟</div>
             </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- 图表展示 -->
+    <!-- 鍥捐〃灞曠ず -->
     <el-row :gutter="20" class="charts-row">
       <el-col :xs="24" :sm="24" :md="12" :lg="12">
         <el-card>
           <template #header>
             <div class="card-header">
-              <span>报名趋势图（最近7天）</span>
+              <span>鎶ュ悕瓒嬪娍鍥撅紙鏈€杩?澶╋級</span>
             </div>
           </template>
           <div ref="registrationTrendChart" style="height: 300px;"></div>
         </el-card>
       </el-col>
       <el-col :xs="24" :sm="24" :md="12" :lg="12">
-        <CommentWordCloud />
-      </el-col>
-    </el-row>
-    <el-row :gutter="20" class="charts-row">
-      <el-col :xs="24" :sm="24" :md="24" :lg="24">
         <el-card>
           <template #header>
             <div class="card-header">
-              <span>赛事状态分布</span>
+              <span>璧涗簨鐘舵€佸垎甯?/span>
             </div>
           </template>
           <div ref="eventStatusChart" style="height: 300px;"></div>
@@ -93,14 +88,14 @@
       </el-col>
     </el-row>
 
-    <!-- 待审核报名列表 -->
+    <!-- 寰呭鏍告姤鍚嶅垪琛?-->
     <el-card class="pending-registrations">
       <template #header>
         <div class="card-header">
-          <span>待审核报名</span>
+          <span>寰呭鏍告姤鍚?/span>
           <el-badge :value="pendingRegistrations.length" :max="99" class="badge">
             <el-button type="primary" size="small" @click="$router.push('/admin/registrations?status=pending')">
-              查看全部
+              鏌ョ湅鍏ㄩ儴
             </el-button>
           </el-badge>
         </div>
@@ -111,20 +106,20 @@
         style="width: 100%"
       >
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="event.name" label="赛事名称" min-width="150" />
-        <el-table-column prop="user.username" label="用户" width="120" />
-        <el-table-column prop="user.profile.phone" label="手机号" width="120" />
-        <el-table-column prop="created_at" label="报名时间" width="180">
+        <el-table-column prop="event.name" label="璧涗簨鍚嶇О" min-width="150" />
+        <el-table-column prop="user.username" label="鐢ㄦ埛" width="120" />
+        <el-table-column prop="user.profile.phone" label="鎵嬫満鍙? width="120" />
+        <el-table-column prop="created_at" label="鎶ュ悕鏃堕棿" width="180">
           <template #default="{ row }">
             {{ formatDateTime(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100">
+        <el-table-column label="鐘舵€? width="100">
           <template #default="{ row }">
             <el-tag type="warning">{{ getStatusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="鎿嶄綔" width="200" fixed="right">
           <template #default="{ row }">
             <el-button
               type="success"
@@ -132,7 +127,7 @@
               @click="handleApprove(row)"
               :loading="row.approving"
             >
-              通过
+              閫氳繃
             </el-button>
             <el-button
               type="danger"
@@ -140,7 +135,7 @@
               @click="handleReject(row)"
               :loading="row.rejecting"
             >
-              拒绝
+              鎷掔粷
             </el-button>
           </template>
         </el-table-column>
@@ -156,7 +151,6 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User, Trophy, Document, Medal } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
-import CommentWordCloud from '@/components/admin/CommentWordCloud.vue'
 import { getUserList } from '@/api/user'
 import { getEventList } from '@/api/event'
 import { getRegistrationList, approveRegistration, rejectRegistration } from '@/api/registration'
@@ -165,10 +159,10 @@ import { getResultList } from '@/api/result'
 const store = useStore()
 const router = useRouter()
 
-// 获取当前用户信息
+// 鑾峰彇褰撳墠鐢ㄦ埛淇℃伅
 const userInfo = computed(() => store.state.user.userInfo)
 
-// 当前时间
+// 褰撳墠鏃堕棿
 const currentTime = ref('')
 let timeInterval = null
 
@@ -185,7 +179,7 @@ const updateTime = () => {
   currentTime.value = now.toLocaleDateString('zh-CN', options)
 }
 
-// 统计数据
+// 缁熻鏁版嵁
 const stats = reactive({
   usersCount: 0,
   eventsCount: 0,
@@ -193,17 +187,16 @@ const stats = reactive({
   resultsCount: 0
 })
 
-// 待审核报名
-const pendingRegistrations = ref([])
+// 寰呭鏍告姤鍚?const pendingRegistrations = ref([])
 const loading = ref(false)
 
-// 图表引用
+// 鍥捐〃寮曠敤
 const registrationTrendChart = ref(null)
 const eventStatusChart = ref(null)
 let trendChartInstance = null
 let statusChartInstance = null
 
-// 获取统计数据
+// 鑾峰彇缁熻鏁版嵁
 const fetchStats = async () => {
   try {
     const [users, events, registrations, results] = await Promise.all([
@@ -218,13 +211,12 @@ const fetchStats = async () => {
     stats.registrationsCount = registrations.count || 0
     stats.resultsCount = results.count || 0
   } catch (error) {
-    console.error('获取统计数据失败:', error)
-    ElMessage.error('获取统计数据失败')
+    console.error('鑾峰彇缁熻鏁版嵁澶辫触:', error)
+    ElMessage.error('鑾峰彇缁熻鏁版嵁澶辫触')
   }
 }
 
-// 获取待审核报名
-const fetchPendingRegistrations = async () => {
+// 鑾峰彇寰呭鏍告姤鍚?const fetchPendingRegistrations = async () => {
   loading.value = true
   try {
     const response = await getRegistrationList({
@@ -233,17 +225,17 @@ const fetchPendingRegistrations = async () => {
     })
     pendingRegistrations.value = response.results || []
   } catch (error) {
-    console.error('获取待审核报名失败:', error)
-    ElMessage.error('获取待审核报名失败')
+    console.error('鑾峰彇寰呭鏍告姤鍚嶅け璐?', error)
+    ElMessage.error('鑾峰彇寰呭鏍告姤鍚嶅け璐?)
   } finally {
     loading.value = false
   }
 }
 
-// 初始化报名趋势图
+// 鍒濆鍖栨姤鍚嶈秼鍔垮浘
 const initRegistrationTrendChart = async () => {
   try {
-    // 获取最近7天的数据
+    // 鑾峰彇鏈€杩?澶╃殑鏁版嵁
     const days = []
     const counts = []
     const today = new Date()
@@ -254,9 +246,8 @@ const initRegistrationTrendChart = async () => {
       const dateStr = date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
       days.push(dateStr)
 
-      // 模拟数据，实际应该从API获取
-      // 可以通过 /api/registrations/?created_at__gte=date 来获取
-      counts.push(Math.floor(Math.random() * 20) + 5)
+      // 妯℃嫙鏁版嵁锛屽疄闄呭簲璇ヤ粠API鑾峰彇
+      // 鍙互閫氳繃 /api/registrations/?created_at__gte=date 鏉ヨ幏鍙?      counts.push(Math.floor(Math.random() * 20) + 5)
     }
 
     if (!trendChartInstance) {
@@ -276,7 +267,7 @@ const initRegistrationTrendChart = async () => {
         type: 'value'
       },
       series: [{
-        name: '报名数量',
+        name: '鎶ュ悕鏁伴噺',
         type: 'line',
         smooth: true,
         data: counts,
@@ -304,14 +295,14 @@ const initRegistrationTrendChart = async () => {
 
     trendChartInstance.setOption(option)
   } catch (error) {
-    console.error('初始化报名趋势图失败:', error)
+    console.error('鍒濆鍖栨姤鍚嶈秼鍔垮浘澶辫触:', error)
   }
 }
 
-// 初始化赛事状态分布图
+// 鍒濆鍖栬禌浜嬬姸鎬佸垎甯冨浘
 const initEventStatusChart = async () => {
   try {
-    // 获取不同状态的赛事数量
+    // 鑾峰彇涓嶅悓鐘舵€佺殑璧涗簨鏁伴噺
     const [draft, published, finished] = await Promise.all([
       getEventList({ status: 'draft', page_size: 1 }),
       getEventList({ status: 'published', page_size: 1 }),
@@ -319,9 +310,9 @@ const initEventStatusChart = async () => {
     ])
 
     const data = [
-      { value: draft.count || 0, name: '草稿' },
-      { value: published.count || 0, name: '已发布' },
-      { value: finished.count || 0, name: '已结束' }
+      { value: draft.count || 0, name: '鑽夌' },
+      { value: published.count || 0, name: '宸插彂甯? },
+      { value: finished.count || 0, name: '宸茬粨鏉? }
     ]
 
     if (!statusChartInstance) {
@@ -336,10 +327,10 @@ const initEventStatusChart = async () => {
       legend: {
         orient: 'vertical',
         right: 10,
-        data: ['草稿', '已发布', '已结束']
+        data: ['鑽夌', '宸插彂甯?, '宸茬粨鏉?]
       },
       series: [{
-        name: '赛事状态',
+        name: '璧涗簨鐘舵€?,
         type: 'pie',
         radius: ['40%', '70%'],
         avoidLabelOverlap: false,
@@ -369,12 +360,11 @@ const initEventStatusChart = async () => {
 
     statusChartInstance.setOption(option)
   } catch (error) {
-    console.error('初始化赛事状态分布图失败:', error)
+    console.error('鍒濆鍖栬禌浜嬬姸鎬佸垎甯冨浘澶辫触:', error)
   }
 }
 
-// 格式化日期时间
-const formatDateTime = (dateStr) => {
+// 鏍煎紡鍖栨棩鏈熸椂闂?const formatDateTime = (dateStr) => {
   if (!dateStr) return '-'
   const date = new Date(dateStr)
   return date.toLocaleString('zh-CN', {
@@ -386,80 +376,77 @@ const formatDateTime = (dateStr) => {
   })
 }
 
-// 获取状态文本
-const getStatusText = (status) => {
+// 鑾峰彇鐘舵€佹枃鏈?const getStatusText = (status) => {
   const statusMap = {
-    pending: '待审核',
-    approved: '已通过',
-    rejected: '已拒绝'
+    pending: '寰呭鏍?,
+    approved: '宸查€氳繃',
+    rejected: '宸叉嫆缁?
   }
   return statusMap[status] || status
 }
 
-// 审核通过
+// 瀹℃牳閫氳繃
 const handleApprove = async (row) => {
   try {
-    await ElMessageBox.confirm('确认通过该报名申请？', '提示', {
-      confirmButtonText: '确认',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm('纭閫氳繃璇ユ姤鍚嶇敵璇凤紵', '鎻愮ず', {
+      confirmButtonText: '纭',
+      cancelButtonText: '鍙栨秷',
       type: 'success'
     })
 
     row.approving = true
     await approveRegistration(row.id)
-    ElMessage.success('审核通过')
+    ElMessage.success('瀹℃牳閫氳繃')
     await fetchPendingRegistrations()
     await fetchStats()
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('审核失败:', error)
-      ElMessage.error(error.response?.data?.error || '审核失败')
+      console.error('瀹℃牳澶辫触:', error)
+      ElMessage.error(error.response?.data?.error || '瀹℃牳澶辫触')
     }
   } finally {
     row.approving = false
   }
 }
 
-// 审核拒绝
+// 瀹℃牳鎷掔粷
 const handleReject = async (row) => {
   try {
-    const { value: remark } = await ElMessageBox.prompt('请输入拒绝原因', '拒绝审核', {
-      confirmButtonText: '确认',
-      cancelButtonText: '取消',
+    const { value: remark } = await ElMessageBox.prompt('璇疯緭鍏ユ嫆缁濆師鍥?, '鎷掔粷瀹℃牳', {
+      confirmButtonText: '纭',
+      cancelButtonText: '鍙栨秷',
       inputPattern: /.+/,
-      inputErrorMessage: '请输入拒绝原因',
+      inputErrorMessage: '璇疯緭鍏ユ嫆缁濆師鍥?,
       inputType: 'textarea'
     })
 
     row.rejecting = true
     await rejectRegistration(row.id, remark)
-    ElMessage.success('已拒绝')
+    ElMessage.success('宸叉嫆缁?)
     await fetchPendingRegistrations()
     await fetchStats()
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('拒绝失败:', error)
-      ElMessage.error(error.response?.data?.error || '拒绝失败')
+      console.error('鎷掔粷澶辫触:', error)
+      ElMessage.error(error.response?.data?.error || '鎷掔粷澶辫触')
     }
   } finally {
     row.rejecting = false
   }
 }
 
-// 窗口大小变化时重新调整图表
-const handleResize = () => {
+// 绐楀彛澶у皬鍙樺寲鏃堕噸鏂拌皟鏁村浘琛?const handleResize = () => {
   trendChartInstance?.resize()
   statusChartInstance?.resize()
 }
 
 onMounted(async () => {
   updateTime()
-  timeInterval = setInterval(updateTime, 60000) // 每分钟更新一次
-
+  timeInterval = setInterval(updateTime, 60000) // 姣忓垎閽熸洿鏂颁竴娆?
   fetchStats()
   fetchPendingRegistrations()
 
-  // 等待 DOM 完全渲染再初始化图表
+  // 绛夊緟 DOM 瀹屽叏娓叉煋鍐嶅垵濮嬪寲鍥捐〃
   await nextTick()
   initRegistrationTrendChart()
   initEventStatusChart()
@@ -580,7 +567,6 @@ onUnmounted(() => {
   margin-top: 20px;
 }
 
-
 .badge {
   margin-left: 10px;
 }
@@ -607,4 +593,3 @@ onUnmounted(() => {
   }
 }
 </style>
-

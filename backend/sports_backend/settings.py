@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
+    "channels",
     "django_filters",
 
     # Local apps
@@ -88,6 +89,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "sports_backend.wsgi.application"
+ASGI_APPLICATION = "sports_backend.asgi.application"
 
 
 # Database
@@ -222,6 +224,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8081",
     "http://127.0.0.1:8080",
     "http://127.0.0.1:8081",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
@@ -231,6 +235,7 @@ CORS_ALLOW_METHODS = [
     'PATCH',
     'POST',
     'PUT',
+    'WEBSOCKET',
 ]
 CORS_ALLOW_HEADERS = [
     'accept',
@@ -243,3 +248,9 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    }
+}
