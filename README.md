@@ -281,6 +281,13 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
++**词云实时推送**
++```bash
++# 使用 Daphne 启动 ASGI，监听 8090 以保留 8000 给 HTTP
++daphne sports_backend.asgi:application --port 8090
++```
++> 前提：已在 `backend` 下安装依赖并设置 `DJANGO_SETTINGS_MODULE=sports_backend.settings`。
+
 ### 2. 启动前端开发服务器
 
 ```bash
@@ -548,5 +555,3 @@ Content-Type: application/json
 1. 本文档 - 项目总览
 2. `backend/API_DOCUMENTATION.md` - API接口文档
 3. `frontend/README.md` - 前端开发文档
-
----
