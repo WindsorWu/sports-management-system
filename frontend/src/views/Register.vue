@@ -148,10 +148,7 @@ const validatePhoneRule = (rule, value, callback) => {
 }
 
 const registerRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度在3-20个字符', trigger: 'blur' }
-  ],
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   email: [
     { required: true, validator: validateEmailRule, trigger: 'blur' }
   ],
