@@ -9,10 +9,10 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
     TokenRefreshView,
     TokenVerifyView,
 )
+from apps.users.token_views import CustomTokenObtainPairView
 
 urlpatterns = [
     # Django管理后台
@@ -20,7 +20,7 @@ urlpatterns = [
 
     # JWT认证接口
     path('api/auth/', include([
-        path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+        path('login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
         path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
         path('verify/', TokenVerifyView.as_view(), name='token_verify'),
     ])),
