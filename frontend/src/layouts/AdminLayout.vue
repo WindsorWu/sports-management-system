@@ -155,7 +155,7 @@ const allMenuItems = [
   { index: '/admin/referees', label: '裁判管理', icon: Ticket, allowedRoles: ['admin'] },
   { index: '/admin/announcements', label: '公告管理', icon: Bell, allowedRoles: ['admin'] },
   { index: '/admin/carousels', label: '轮播图管理', icon: Picture, allowedRoles: ['admin'] },
-  { index: '/admin/feedback', label: '反馈管理', icon: ChatDotRound, allowedRoles: ['admin'] }
+  { index: '/admin/feedback', label: '评论管理', icon: ChatDotRound, allowedRoles: ['admin'] }
 ]
 
 // Filter menu items based on user role
