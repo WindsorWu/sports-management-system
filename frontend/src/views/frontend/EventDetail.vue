@@ -167,12 +167,12 @@
         <div v-loading="commentsLoading" class="comments-list">
           <div v-if="comments.length > 0">
             <div v-for="comment in comments" :key="comment.id" class="comment-item">
-              <el-avatar :src="comment.user.avatar" :size="40">
-                {{ comment.user.username?.charAt(0) || 'U' }}
+              <el-avatar :src="getCommentAvatar(comment)" :size="40">
+                {{ getCommentInitial(comment) }}
               </el-avatar>
               <div class="comment-content-wrapper">
                 <div class="comment-header">
-                  <span class="username">{{ comment.user.username }}</span>
+                  <span class="username">{{ getCommentUserName(comment) }}</span>
                   <span class="time">{{ formatDate(comment.created_at, 'YYYY-MM-DD HH:mm') }}</span>
                 </div>
                 <div class="comment-text">{{ comment.content }}</div>
@@ -616,6 +616,19 @@ const handleComment = async () => {
 const handleCommentPageChange = (page) => {
   commentPage.value = page
   fetchComments()
+}
+
+const getCommentUserName = (comment) => {
+  return comment.user_name || comment.user?.username || '匿名用户'
+}
+
+const getCommentAvatar = (comment) => {
+  return comment.user_avatar || comment.user?.avatar || ''
+}
+
+const getCommentInitial = (comment) => {
+  const name = getCommentUserName(comment)
+  return name ? name.charAt(0) : 'U'
 }
 
 // 页面加载时获取数据
