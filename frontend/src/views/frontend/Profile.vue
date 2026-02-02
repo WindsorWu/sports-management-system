@@ -364,8 +364,7 @@ const passwordRules = {
     { required: true, message: '请输入原密码', trigger: 'blur' }
   ],
   new_password: [
-    { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能小于6位', trigger: 'blur' }
+    { required: true, message: '请输入新密码', trigger: 'blur' }
   ],
   new_password_confirm: [
     { required: true, message: '请再次输入新密码', trigger: 'blur' },
