@@ -209,8 +209,8 @@
         :rules="editRules"
         label-width="80px"
       >
-        <el-form-item label="真实姓名" prop="real_name">
-          <el-input v-model="editForm.real_name" placeholder="请输入真实姓名" />
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="editForm.username" placeholder="请输入用户名" />
         </el-form-item>
         <el-form-item label="手机号" prop="phone">
           <el-input v-model="editForm.phone" placeholder="请输入手机号" />
@@ -316,12 +316,20 @@ const submitting = ref(false)
 // 编辑个人信息表单
 const editFormRef = ref(null)
 const editForm = reactive({
-  real_name: '',
+  username: '',
   phone: '',
   email: ''
 })
 
 // 验证规则
+const validateUsernameRule = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error('请输入用户名'))
+  } else {
+    callback()
+  }
+}
+
 const validatePhoneRule = (rule, value, callback) => {
   if (value && !validatePhone(value)) {
     callback(new Error('请输入正确的手机号'))
@@ -339,6 +347,7 @@ const validateEmailRule = (rule, value, callback) => {
 }
 
 const editRules = {
+  username: [{ validator: validateUsernameRule, trigger: 'blur' }],
   phone: [{ validator: validatePhoneRule, trigger: 'blur' }],
   email: [{ validator: validateEmailRule, trigger: 'blur' }]
 }
@@ -539,7 +548,7 @@ const handleImageError = (e) => {
 // 初始化
 onMounted(() => {
   // 填充编辑表单
-  editForm.real_name = userInfo.value.real_name || ''
+  editForm.username = userInfo.value.username || ''
   editForm.phone = userInfo.value.phone || ''
   editForm.email = userInfo.value.email || ''
 

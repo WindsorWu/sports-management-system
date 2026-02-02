@@ -81,6 +81,19 @@ class UserProfileSerializer(serializers.ModelSerializer):
         ]
 
 
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    """用户个人信息更新序列化器"""
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'phone']
+        extra_kwargs = {
+            'username': {'required': True},
+            'email': {'required': True},
+            'phone': {'required': False}
+        }
+
+
 class ChangePasswordSerializer(serializers.Serializer):
     """修改密码序列化器"""
     old_password = serializers.CharField(

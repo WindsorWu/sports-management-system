@@ -13,6 +13,7 @@ from .serializers import (
     UserSerializer,
     UserRegisterSerializer,
     UserProfileSerializer,
+    UserProfileUpdateSerializer,
     ChangePasswordSerializer
 )
 from utils.permissions import IsAdmin, IsOwnerOrAdmin
@@ -54,8 +55,10 @@ class UserViewSet(viewsets.ModelViewSet):
         """根据不同操作返回不同的序列化器"""
         if self.action == 'register':
             return UserRegisterSerializer
-        elif self.action in ['me', 'update_profile']:
+        elif self.action == 'me':
             return UserProfileSerializer
+        elif self.action == 'update_profile':
+            return UserProfileUpdateSerializer
         elif self.action == 'change_password':
             return ChangePasswordSerializer
         return UserSerializer

@@ -40,8 +40,8 @@ export function getUserInfo() {
  */
 export function updateUserInfo(data) {
   return request({
-    url: '/users/me/',
-    method: 'put',
+    url: '/users/update_profile/',
+    method: 'patch',
     data
   })
 }
