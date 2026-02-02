@@ -246,6 +246,16 @@ class CommentViewSet(viewsets.ModelViewSet):
     search_fields = ['content', 'user__username', 'user__real_name']
     ordering = ['-created_at']
 
+    def filter_target_type(self, queryset):
+        target_type = self.request.query_params.get('target_type')
+        if not target_type:
+            return queryset
+        model_name = target_type.split('.')[-1].lower()
+        content_type = ContentType.objects.filter(model=model_name).first()
+        if content_type:
+            return queryset.filter(content_type=content_type)
+        return queryset
+
     def get_permissions(self):
         """设置权限"""
         if self.action in ['list', 'retrieve']:
@@ -273,9 +283,12 @@ class CommentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """普通用户只能看到已审核的评论"""
         user = self.request.user
+        queryset = self.queryset
         if user.is_authenticated and (user.is_superuser or user.user_type == 'admin'):
-            return self.queryset
-        return self.queryset.filter(is_approved=True)
+            pass
+        else:
+            queryset = queryset.filter(is_approved=True)
+        return self.filter_target_type(queryset)
 
     def create(self, request, *args, **kwargs):
         """创建评论"""

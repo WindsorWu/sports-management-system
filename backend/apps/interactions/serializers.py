@@ -82,6 +82,8 @@ class CommentSerializer(serializers.ModelSerializer):
     reply_to_name = serializers.CharField(source='reply_to.real_name', read_only=True)
     content_type_name = serializers.SerializerMethodField()
     replies = serializers.SerializerMethodField()
+    event_title = serializers.SerializerMethodField()
+    event_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
@@ -89,11 +91,12 @@ class CommentSerializer(serializers.ModelSerializer):
             'id', 'user', 'user_name', 'user_avatar', 'content_type',
             'content_type_name', 'object_id', 'content', 'parent',
             'reply_to', 'reply_to_name', 'is_approved', 'like_count',
-            'replies', 'created_at', 'updated_at'
+            'replies', 'created_at', 'updated_at', 'event_title', 'event_id'
         ]
         read_only_fields = [
             'id', 'user', 'like_count', 'created_at', 'updated_at',
-            'user_name', 'user_avatar', 'reply_to_name', 'content_type_name', 'replies'
+            'user_name', 'user_avatar', 'reply_to_name', 'content_type_name', 'replies',
+            'event_title', 'event_id'
         ]
 
     def get_content_type_name(self, obj):
@@ -105,6 +108,18 @@ class CommentSerializer(serializers.ModelSerializer):
         if obj.replies.exists():
             return CommentSimpleSerializer(obj.replies.all(), many=True).data
         return []
+
+    def get_event_title(self, obj):
+        """获取关联赛事标题"""
+        if obj.content_type.model == 'event':
+            return getattr(obj.content_object, 'title', None)
+        return None
+
+    def get_event_id(self, obj):
+        """获取关联赛事ID"""
+        if obj.content_type.model == 'event':
+            return getattr(obj.content_object, 'id', None)
+        return None
 
     def create(self, validated_data):
         """创建评论"""

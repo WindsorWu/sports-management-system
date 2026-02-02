@@ -89,6 +89,26 @@ export function deleteComment(id) {
 }
 
 /**
+ * 审核通过评论
+ */
+export function approveComment(id) {
+  return request({
+    url: `/interactions/comments/${id}/approve/`,
+    method: 'put'
+  })
+}
+
+/**
+ * 审核拒绝评论
+ */
+export function rejectComment(id) {
+  return request({
+    url: `/interactions/comments/${id}/reject/`,
+    method: 'put'
+  })
+}
+
+/**
  * 获取我的收藏列表
  */
 export function getMyFavorites() {
