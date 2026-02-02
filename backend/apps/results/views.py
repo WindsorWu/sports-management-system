@@ -15,6 +15,7 @@ from .serializers import ResultSerializer, ResultCreateSerializer, ResultListSer
 from utils.permissions import IsAdmin, IsAdminOrReferee
 from utils.export import export_results
 from apps.events.models import RefereeEventAccess
+from apps.registrations.models import Registration
 
 
 class ResultViewSet(viewsets.ModelViewSet):
@@ -38,7 +39,7 @@ class ResultViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve']:
             # 列表和详情允许任何人访问（但只能看到已公开的）
             permission_classes = [AllowAny]
-        elif self.action in ['create', 'update', 'partial_update', 'destroy', 'publish', 'export']:
+        elif self.action in ['create', 'update', 'partial_update', 'destroy', 'publish', 'export', 'pending_results_count']:
             # 创建、更新、删除、公开、导出需要管理员或裁判权限
             permission_classes = [IsAdminOrReferee]
         else:
@@ -189,3 +190,27 @@ class ResultViewSet(viewsets.ModelViewSet):
 
         serializer = ResultSerializer(results, many=True)
         return Response(serializer.data)
+
+    def get_pending_results_count(self, event_ids=None):
+        queryset = Result.objects.select_related('event', 'registration')
+        recorded_ids = set(queryset.filter(event_id__in=event_ids).values_list('registration_id', flat=True)) if event_ids else set()
+        reg_queryset = Registration.objects.filter(status='approved')
+        if event_ids:
+            reg_queryset = reg_queryset.filter(event_id__in=event_ids)
+        if recorded_ids:
+            reg_queryset = reg_queryset.exclude(id__in=recorded_ids)
+        return reg_queryset.count()
+
+    @action(detail=False, methods=['get'])
+    def pending_results_count(self, request):
+        """管理员/裁判：获取裁判负责赛事中未录入的运动员数"""
+        user = request.user
+        if user.is_authenticated and (user.is_superuser or user.user_type in ['admin', 'organizer']):
+            count = self.get_pending_results_count()
+            return Response({'count': count})
+
+        event_ids = self.get_referee_event_ids(user)
+        if not event_ids:
+            return Response({'count': 0})
+        count = self.get_pending_results_count(event_ids)
+        return Response({'count': count})

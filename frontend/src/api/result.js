@@ -106,3 +106,13 @@ export function exportResults(params) {
     responseType: 'blob'
   })
 }
+
+/**
+ * 获取待录成绩数（裁判）
+ */
+export function getPendingResultsCount() {
+  return request({
+    url: '/results/pending_results_count/',
+    method: 'get'
+  })
+}

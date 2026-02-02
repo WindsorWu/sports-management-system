@@ -62,6 +62,19 @@
           </div>
         </el-card>
       </el-col>
+      <el-col :xs="12" :sm="12" :md="6" :lg="6">
+        <el-card class="stat-card stat-card-5">
+          <div class="stat-content">
+            <div class="stat-icon">
+              <el-icon :size="40"><Loading /></el-icon>
+            </div>
+            <div class="stat-info">
+              <div class="stat-value" v-if="canViewPendingResults">{{ pendingResultsCount }}</div>
+              <div class="stat-label">待录成绩</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
     </el-row>
 
     <!-- 图表展示 -->
@@ -150,17 +163,17 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, nextTick, watch } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { User, Trophy, Document, Medal } from '@element-plus/icons-vue'
+import { User, Trophy, Document, Medal, Loading } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import CommentWordCloud from '@/components/admin/CommentWordCloud.vue'
 import { getUserList } from '@/api/user'
 import { getEventList } from '@/api/event'
 import { getRegistrationList, approveRegistration, rejectRegistration } from '@/api/registration'
-import { getResultList } from '@/api/result'
+import { getResultList, getPendingResultsCount } from '@/api/result'
 
 const store = useStore()
 const router = useRouter()
@@ -196,6 +209,7 @@ const stats = reactive({
 // 待审核报名
 const pendingRegistrations = ref([])
 const loading = ref(false)
+const pendingResultsCount = ref(0)
 
 // 图表引用
 const registrationTrendChart = ref(null)
@@ -205,6 +219,12 @@ let statusChartInstance = null
 
 // 判断当前用户是否为裁判
 const isReferee = computed(() => userInfo.value?.user_type === 'referee')
+
+// 帮助器：判断当前用户是否可以查看待录成绩
+const canViewPendingResults = computed(() => {
+  const type = userInfo.value?.user_type
+  return type === 'admin' || type === 'referee'
+})
 
 // 获取统计数据
 const fetchStats = async () => {
@@ -240,6 +260,21 @@ const fetchPendingRegistrations = async () => {
     ElMessage.error('获取待审核报名失败')
   } finally {
     loading.value = false
+  }
+}
+
+// 获取待录成绩数量
+const fetchPendingResultsCount = async () => {
+  if (!canViewPendingResults.value) {
+    pendingResultsCount.value = 0
+    return
+  }
+
+  try {
+    const response = await getPendingResultsCount()
+    pendingResultsCount.value = response.count || 0
+  } catch (error) {
+    console.error('获取待录成绩失败:', error)
   }
 }
 
@@ -455,12 +490,22 @@ const handleResize = () => {
   statusChartInstance?.resize()
 }
 
+// 监听当前用户角色，进入或退出管理员/裁判时刷新或清空待录成绩
+watch(canViewPendingResults, (visible) => {
+  if (visible) {
+    fetchPendingResultsCount()
+  } else {
+    pendingResultsCount.value = 0
+  }
+})
+
 onMounted(async () => {
   updateTime()
   timeInterval = setInterval(updateTime, 60000) // 每分钟更新一次
 
   fetchStats()
   fetchPendingRegistrations()
+  fetchPendingResultsCount()
 
   // 等待 DOM 完全渲染再初始化图表
   await nextTick()
@@ -510,6 +555,43 @@ onUnmounted(() => {
 
 .stats-row {
   margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.stats-row .el-col {
+  flex: 1 1 calc(20% - 20px);
+  max-width: calc(20% - 20px);
+  min-width: 200px;
+}
+
+@media (max-width: 1400px) {
+  .stats-row .el-col {
+    flex: 1 1 calc(25% - 20px);
+    max-width: calc(25% - 20px);
+  }
+}
+
+@media (max-width: 1100px) {
+  .stats-row .el-col {
+    flex: 1 1 calc(33.333% - 20px);
+    max-width: calc(33.333% - 20px);
+  }
+}
+
+@media (max-width: 800px) {
+  .stats-row .el-col {
+    flex: 1 1 calc(50% - 20px);
+    max-width: calc(50% - 20px);
+  }
+}
+
+@media (max-width: 500px) {
+  .stats-row .el-col {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
 }
 
 .stat-card {
@@ -542,6 +624,11 @@ onUnmounted(() => {
   color: white;
 }
 
+.stat-card-5 {
+  background: linear-gradient(135deg, #ffa940 0%, #ff7a18 100%);
+  color: white;
+}
+
 .stat-content {
   display: flex;
   align-items: center;
@@ -566,6 +653,12 @@ onUnmounted(() => {
 .stat-label {
   font-size: 14px;
   opacity: 0.9;
+}
+
+.stat-note {
+  font-size: 12px;
+  color: #f56c6c;
+  margin-top: 5px;
 }
 
 .charts-row {
