@@ -244,6 +244,10 @@
           />
         </el-form-item>
 
+        <el-form-item label="赛事类型" prop="event_type">
+          <el-input v-model="form.event_type" placeholder="请输入赛事类型，如：田径、游泳" />
+        </el-form-item>
+
         <el-form-item label="状态" prop="status">
           <el-select v-model="form.status" placeholder="请选择状态" style="width: 100%;">
             <el-option label="草稿" value="draft" />
@@ -305,7 +309,7 @@ const form = reactive({
   location: '',
   description: '',
   status: 'draft',
-  event_type: 'athletics',  // 默认田径
+  event_type: '',
   registration_start: '',
   registration_end: '',
   contact_person: '',
@@ -355,6 +359,9 @@ const formRules = {
   ],
   location: [
     { required: true, message: '请输入参赛地点', trigger: 'blur' }
+  ],
+  event_type: [
+    { required: true, message: '请输入赛事类型', trigger: 'blur' }
   ],
   contact_person: [
     { required: true, message: '请输入联系人', trigger: 'blur' }
@@ -466,7 +473,7 @@ const handleEdit = (event) => {
   form.location = event.location
   form.description = event.description || ''
   form.status = event.status
-  form.event_type = event.event_type || 'athletics'
+  form.event_type = event.event_type || ''
   form.registration_start = event.registration_start
   form.registration_end = event.registration_end
   form.contact_person = event.contact_person || ''
@@ -497,9 +504,7 @@ const handleSubmit = async () => {
     formData.append('location', form.location)
     formData.append('description', form.description || '')
     formData.append('status', form.status)
-
-    // 添加必填字段
-    formData.append('event_type', form.event_type || 'athletics')
+    formData.append('event_type', form.event_type)
     formData.append('registration_start', formatDateTime(form.registration_start || form.start_time))
     formData.append('registration_end', formatDateTime(form.registration_end || form.end_time))
     formData.append('contact_person', form.contact_person)
@@ -606,6 +611,7 @@ const resetForm = () => {
   form.location = ''
   form.description = ''
   form.status = 'draft'
+  form.event_type = ''
   form.contact_person = ''
   form.contact_phone = ''
   formRef.value?.clearValidate()

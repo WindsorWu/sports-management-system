@@ -48,12 +48,12 @@
       </el-row>
     </div>
 
-    <!-- 热门赛事推荐 -->
+    <!-- 赛事推荐 -->
     <div class="hot-events">
       <div class="section-header">
         <h2>
           <el-icon><TrendCharts /></el-icon>
-          热门赛事推荐
+          赛事推荐
         </h2>
         <el-button text @click="$router.push('/events')">查看更多 <el-icon><ArrowRight /></el-icon></el-button>
       </div>
