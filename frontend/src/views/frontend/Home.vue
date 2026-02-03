@@ -217,16 +217,26 @@ const fetchCarousels = async () => {
   }
 }
 
-// 获取热门赛事
+// 随机抽取热门赛事
+const getRandomEvents = (events, count) => {
+  const list = [...events]
+  for (let i = list.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[list[i], list[j]] = [list[j], list[i]]
+  }
+  return list.slice(0, Math.min(count, list.length))
+}
+
 const fetchHotEvents = async () => {
   loading.value = true
   try {
     const data = await getEventList({
       status: 'published',
       ordering: '-click_count',
-      page_size: 6
+      page_size: 10
     })
-    hotEvents.value = data.results || []
+    const candidates = data.results || []
+    hotEvents.value = getRandomEvents(candidates, 3)
   } catch (error) {
     console.error('获取热门赛事失败:', error)
     ElMessage.error('获取热门赛事失败')
