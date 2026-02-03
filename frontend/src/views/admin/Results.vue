@@ -675,18 +675,15 @@ const handleDelete = async (result) => {
 
 // 批量公开成绩
 const handleBulkPublish = async () => {
-  const ids = results.value
-    .filter(result => result.is_published === false)
-    .map(result => result.id)
-
-  if (ids.length === 0) {
-    ElMessage.info('没有需要公开的成绩')
+  const ids = selectedResults.value.map(result => result.id)
+  if (!ids.length) {
+    ElMessage.info('请先勾选需要公开的成绩')
     return
   }
 
   try {
     await ElMessageBox.confirm(
-      `确认公开选中的 ${ids.length} 条成绩记录吗？`,
+      `确认公开选中的 ${ids.length} 条成绩记录吗？此操作不可恢复！`,
       '批量公开确认',
       {
         confirmButtonText: '确认公开',
@@ -696,26 +693,23 @@ const handleBulkPublish = async () => {
       }
     )
 
-    for (const id of ids) {
-      await patchResult(id, { is_published: true })
-    }
-
+    await bulkPublishResults(ids)
     ElMessage.success('批量公开成功')
+    resetSelection()
     await fetchResults()
   } catch (error) {
-    console.error('批量公开失败:', error)
-    ElMessage.error('批量公开失败')
+    if (error !== 'cancel') {
+      console.error('批量公开失败:', error)
+      ElMessage.error('批量公开失败')
+    }
   }
 }
 
 // 批量删除成绩
 const handleBulkDelete = async () => {
-  const ids = results.value
-    .filter(result => result.is_published === false)
-    .map(result => result.id)
-
-  if (ids.length === 0) {
-    ElMessage.info('没有需要删除的成绩')
+  const ids = selectedResults.value.map(result => result.id)
+  if (!ids.length) {
+    ElMessage.info('请先勾选需要删除的成绩')
     return
   }
 
@@ -731,15 +725,15 @@ const handleBulkDelete = async () => {
       }
     )
 
-    for (const id of ids) {
-      await deleteResult(id)
-    }
-
+    await bulkDeleteResults(ids)
     ElMessage.success('批量删除成功')
+    resetSelection()
     await fetchResults()
   } catch (error) {
-    console.error('批量删除失败:', error)
-    ElMessage.error('批量删除失败')
+    if (error !== 'cancel') {
+      console.error('批量删除失败:', error)
+      ElMessage.error('批量删除失败')
+    }
   }
 }
 

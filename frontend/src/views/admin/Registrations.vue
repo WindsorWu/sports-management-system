@@ -18,6 +18,26 @@
             >
               批量通过
             </el-button>
+            <el-button
+              type="warning"
+              icon="CircleClose"
+              @click="handleBulkReject"
+              :loading="bulkRejecting"
+              :disabled="!hasPendingSelection"
+              style="margin-left: 10px;"
+            >
+              批量驳回
+            </el-button>
+            <el-button
+              type="danger"
+              icon="Delete"
+              @click="handleBulkDelete"
+              :loading="bulkDeleting"
+              :disabled="!hasSelection"
+              style="margin-left: 10px;"
+            >
+              批量删除
+            </el-button>
             <el-button type="success" icon="Download" @click="handleExport" :loading="exporting" :disabled="!eventFilter">
               导出Excel
             </el-button>
@@ -84,7 +104,7 @@
         @selection-change="handleSelectionChange"
         row-key="id"
       >
-        <el-table-column type="selection" width="55" :selectable="row => row.status === 'pending'" />
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="registration_number" label="报名编号" width="200" show-overflow-tooltip />
         <el-table-column label="赛事名称" min-width="180" show-overflow-tooltip>
@@ -265,7 +285,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
-import { getRegistrationList, getRegistrationDetail, approveRegistration, rejectRegistration, bulkApproveRegistrations, exportRegistrations } from '@/api/registration'
+import { getRegistrationList, getRegistrationDetail, approveRegistration, rejectRegistration, bulkApproveRegistrations, bulkRejectRegistrations, bulkDeleteRegistrations, exportRegistrations } from '@/api/registration'
 import { getEventList } from '@/api/event'
 
 const route = useRoute()
@@ -297,8 +317,23 @@ const eventList = ref([])
 
 // 批量审核
 const bulkApproving = ref(false)
+const bulkRejecting = ref(false)
+const bulkDeleting = ref(false)
 const selectedRegistrations = ref([])
 const hasPendingSelection = computed(() => selectedRegistrations.value.some((row) => row.status === 'pending'))
+const hasSelection = computed(() => selectedRegistrations.value.length > 0)
+
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
 
 const fetchRegistrations = async () => {
   loading.value = true
@@ -505,20 +540,76 @@ const handleBulkApprove = async () => {
   }
 }
 
-const handleSelectionChange = (selection) => {
-  selectedRegistrations.value = selection
+const handleBulkReject = async () => {
+  const pendingRows = selectedRegistrations.value.filter((row) => row.status === 'pending')
+  if (!pendingRows.length) {
+    ElMessage.warning('请先选择待审核的报名记录')
+    return
+  }
+
+  try {
+    const { value: review_remarks } = await ElMessageBox.prompt('请输入驳回原因', '批量驳回', {
+      confirmButtonText: '确认',
+      cancelButtonText: '取消',
+      inputPattern: /.+/,
+      inputErrorMessage: '请输入驳回原因',
+      inputType: 'textarea'
+    })
+
+    bulkRejecting.value = true
+    await bulkRejectRegistrations({
+      ids: pendingRows.map((row) => row.id),
+      review_remarks: review_remarks || ''
+    })
+    ElMessage.success('批量驳回成功')
+    selectedRegistrations.value = []
+    if (detailDialogVisible.value) {
+      detailDialogVisible.value = false
+    }
+    await fetchRegistrations()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量驳回失败:', error)
+      ElMessage.error(error.response?.data?.error || '批量驳回失败')
+    }
+  } finally {
+    bulkRejecting.value = false
+  }
 }
 
-const formatDateTime = (dateStr) => {
-  if (!dateStr) return '-'
-  const date = new Date(dateStr)
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+const handleBulkDelete = async () => {
+  const selectedRows = selectedRegistrations.value
+  if (!selectedRows.length) {
+    ElMessage.warning('请先选择要删除的报名记录')
+    return
+  }
+
+  try {
+    ElMessageBox.confirm('确认删除选中的报名记录吗？', '批量删除', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(async () => {
+      bulkDeleting.value = true
+      await Promise.all(
+        selectedRows.map((row) => {
+          return rejectRegistration(row.id)
+        })
+      )
+      ElMessage.success('批量删除成功')
+      selectedRegistrations.value = []
+      await fetchRegistrations()
+    }).catch(() => {})
+  } catch (error) {
+    console.error('批量删除失败:', error)
+    ElMessage.error('批量删除失败')
+  } finally {
+    bulkDeleting.value = false
+  }
+}
+
+const handleSelectionChange = (selection) => {
+  selectedRegistrations.value = selection
 }
 
 onMounted(() => {

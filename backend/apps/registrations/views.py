@@ -8,13 +8,15 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.utils import timezone
+from django.db import transaction
 
 from .models import Registration
 from .serializers import (
     RegistrationSerializer,
     RegistrationCreateSerializer,
     RegistrationReviewSerializer,
-    RegistrationBulkReviewSerializer
+    RegistrationBulkReviewSerializer,
+    RegistrationBulkDeleteSerializer
 )
 from utils.permissions import IsAdmin, IsAdminOrReferee, IsOwnerOrAdmin
 from utils.export import export_registrations
@@ -45,7 +47,7 @@ class RegistrationViewSet(viewsets.ModelViewSet):
         elif self.action in ['update', 'partial_update', 'destroy']:
             # 更新和删除需要是所有者或管理员
             permission_classes = [IsOwnerOrAdmin]
-        elif self.action in ['approve', 'reject', 'export', 'bulk_approve']:
+        elif self.action in ['approve', 'reject', 'export', 'bulk_approve', 'bulk_reject', 'bulk_delete']:
             # 审核和导出需要管理员或裁判权限
             permission_classes = [IsAdminOrReferee]
         else:
@@ -237,4 +239,64 @@ class RegistrationViewSet(viewsets.ModelViewSet):
         return Response({
             'message': f'成功通过 {len(approved_ids)} 条报名',
             'approved_ids': approved_ids
+        })
+
+    @action(detail=False, methods=['post'])
+    def bulk_reject(self, request):
+        """批量驳回报名"""
+        serializer = RegistrationBulkReviewSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        ids = serializer.validated_data['ids']
+        review_remarks = serializer.validated_data.get('review_remarks', '')
+        queryset = self.get_queryset().filter(id__in=ids, status='pending')
+        if not queryset.exists():
+            return Response({'error': '未找到任何待审核的报名'}, status=status.HTTP_400_BAD_REQUEST)
+
+        now = timezone.now()
+        rejected_ids = []
+        for registration in queryset:
+            registration.status = 'rejected'
+            registration.review_remarks = review_remarks
+            registration.reviewed_by = request.user
+            registration.reviewed_at = now
+            registration.save(update_fields=['status', 'review_remarks', 'reviewed_by', 'reviewed_at'])
+
+            event = registration.event
+            if event.current_participants > 0:
+                event.current_participants -= 1
+                event.save(update_fields=['current_participants'])
+
+            rejected_ids.append(registration.id)
+
+        return Response({
+            'message': f'成功驳回 {len(rejected_ids)} 条报名',
+            'rejected_ids': rejected_ids
+        })
+
+    @action(detail=False, methods=['post'])
+    def bulk_delete(self, request):
+        """批量删除报名"""
+        serializer = RegistrationBulkDeleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        ids = serializer.validated_data['ids']
+        queryset = self.get_queryset().filter(id__in=ids)
+        if not queryset.exists():
+            return Response({'error': '没有找到任何要删除的报名'}, status=status.HTTP_400_BAD_REQUEST)
+
+        deleted_ids = []
+        with transaction.atomic():
+            for registration in queryset.select_related('event'):
+                event = registration.event
+                # 仅对未被取消/拒绝的报名减少人数
+                if registration.status in ['pending', 'approved'] and event.current_participants > 0:
+                    event.current_participants -= 1
+                    event.save(update_fields=['current_participants'])
+                deleted_ids.append(registration.id)
+            queryset.delete()
+
+        return Response({
+            'message': f'成功删除 {len(deleted_ids)} 条报名',
+            'deleted_ids': deleted_ids
         })

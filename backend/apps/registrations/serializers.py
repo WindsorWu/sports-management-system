@@ -147,3 +147,8 @@ class RegistrationBulkReviewSerializer(serializers.Serializer):
     ids = serializers.ListField(child=serializers.IntegerField(), min_length=1)
     review_remarks = serializers.CharField(required=False, allow_blank=True)
 
+
+class RegistrationBulkDeleteSerializer(serializers.Serializer):
+    """批量删除序列化器"""
+    ids = serializers.ListField(child=serializers.IntegerField(), min_length=1)
+

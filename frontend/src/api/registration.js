@@ -96,6 +96,22 @@ export function bulkApproveRegistrations(data) {
   })
 }
 
+export function bulkRejectRegistrations(data) {
+  return request({
+    url: '/registrations/bulk_reject/',
+    method: 'post',
+    data
+  })
+}
+
+export function bulkDeleteRegistrations(data) {
+  return request({
+    url: '/registrations/bulk_delete/',
+    method: 'post',
+    data
+  })
+}
+
 /**
  * 导出报名数据（管理员）
  */
