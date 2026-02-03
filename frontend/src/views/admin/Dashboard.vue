@@ -124,9 +124,9 @@
         style="width: 100%"
       >
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="event.name" label="赛事名称" min-width="150" />
-        <el-table-column prop="user.username" label="用户" width="120" />
-        <el-table-column prop="user.profile.phone" label="手机号" width="120" />
+        <el-table-column prop="event_title" label="赛事名称" min-width="150" />
+        <el-table-column prop="user_username" label="用户" width="140" />
+        <el-table-column prop="participant_phone" label="手机号" width="140" />
         <el-table-column prop="created_at" label="报名时间" width="180">
           <template #default="{ row }">
             {{ formatDateTime(row.created_at) }}
