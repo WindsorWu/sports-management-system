@@ -70,6 +70,16 @@
             :value="event.id"
           />
         </el-select>
+        <el-select
+          v-model="publishFilter"
+          placeholder="公开状态"
+          style="width: 160px; margin-left: 10px;"
+          @change="handleSearch"
+        >
+          <el-option label="全部" value="all" />
+          <el-option label="已公开" value="published" />
+          <el-option label="未公开" value="unpublished" />
+        </el-select>
         <span v-if="!eventFilter" class="event-hint">
           <el-icon><Warning /></el-icon>
           请选择具体赛事后再进行查询、录入或导出
@@ -328,6 +338,7 @@ import { getMyRefereeEvents } from '@/api/referee'
 // 搜索和筛选
 const searchQuery = ref('')
 const eventFilter = ref('')
+const publishFilter = ref('all')
 
 const store = useStore()
 const isReferee = computed(() => store.state.user.userInfo?.user_type === 'referee')
@@ -484,6 +495,10 @@ const fetchResults = async () => {
 
     if (eventFilter.value) {
       params.event = eventFilter.value
+    }
+
+    if (publishFilter.value !== 'all') {
+      params.is_published = publishFilter.value === 'published'
     }
 
     const response = await getResultList(params)
