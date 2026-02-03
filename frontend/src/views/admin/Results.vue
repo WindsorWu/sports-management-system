@@ -9,6 +9,20 @@
               刷新
             </el-button>
             <el-button
+              type="success"
+              @click="handleBulkPublish"
+              :disabled="!eventFilter || !hasSelection"
+            >
+              批量公开成绩
+            </el-button>
+            <el-button
+              type="danger"
+              @click="handleBulkDelete"
+              :disabled="!eventFilter || !hasSelection"
+            >
+              批量删除成绩
+            </el-button>
+            <el-button
               type="info"
               icon="Upload"
               @click="handleImportOpen"
@@ -64,12 +78,15 @@
 
       <!-- 成绩列表表格 -->
       <el-table
+        ref="resultsTable"
         :data="results"
         v-loading="loading"
         stripe
         border
         style="width: 100%; margin-top: 20px;"
+        @selection-change="handleSelectionChange"
       >
+        <el-table-column type="selection" width="55" align="center" />
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column label="赛事" min-width="180" show-overflow-tooltip>
           <template #default="{ row }">
@@ -301,7 +318,9 @@ import {
   deleteResult,
   publishResult,
   exportResults,
-  importResults
+  importResults,
+  bulkPublishResults,
+  bulkDeleteResults
 } from '@/api/result'
 import { getEventList, getEventRegistrations } from '@/api/event'
 import { getMyRefereeEvents } from '@/api/referee'
@@ -327,6 +346,9 @@ const registrationLoading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const resultsTable = ref(null)
+const selectedResults = ref([])
+const hasSelection = computed(() => selectedResults.value.length > 0)
 
 // 对话框
 const dialogVisible = ref(false)
@@ -400,6 +422,15 @@ const resetImportDialog = () => {
   importResultErrors.value = []
   importSuccessCount.value = 0
   importLoading.value = false
+}
+
+const handleSelectionChange = (selection) => {
+  selectedResults.value = selection
+}
+
+const resetSelection = () => {
+  selectedResults.value = []
+  resultsTable.value?.clearSelection()
 }
 
 const handleImportSubmit = async () => {
@@ -642,40 +673,73 @@ const handleDelete = async (result) => {
   }
 }
 
-// 导出Excel
-const handleExport = async () => {
-  if (!eventFilter.value) {
-    ElMessage.warning('请先选择一个赛事，再导出成绩')
+// 批量公开成绩
+const handleBulkPublish = async () => {
+  const ids = results.value
+    .filter(result => result.is_published === false)
+    .map(result => result.id)
+
+  if (ids.length === 0) {
+    ElMessage.info('没有需要公开的成绩')
     return
   }
+
   try {
-    ElMessage.info('正在导出，请稍候...')
+    await ElMessageBox.confirm(
+      `确认公开选中的 ${ids.length} 条成绩记录吗？`,
+      '批量公开确认',
+      {
+        confirmButtonText: '确认公开',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--success'
+      }
+    )
 
-    const params = {}
-    if (searchQuery.value) {
-      params.search = searchQuery.value
+    for (const id of ids) {
+      await patchResult(id, { is_published: true })
     }
-    if (eventFilter.value) {
-      params.event = eventFilter.value
-    }
 
-    const response = await exportResults(params)
-
-    // 创建下载链接
-    const blob = new Blob([response], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `成绩列表_${new Date().getTime()}.xlsx`
-    link.click()
-    window.URL.revokeObjectURL(url)
-
-    ElMessage.success('导出成功')
+    ElMessage.success('批量公开成功')
+    await fetchResults()
   } catch (error) {
-    console.error('导出失败:', error)
-    ElMessage.error('导出失败')
+    console.error('批量公开失败:', error)
+    ElMessage.error('批量公开失败')
+  }
+}
+
+// 批量删除成绩
+const handleBulkDelete = async () => {
+  const ids = results.value
+    .filter(result => result.is_published === false)
+    .map(result => result.id)
+
+  if (ids.length === 0) {
+    ElMessage.info('没有需要删除的成绩')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确认删除选中的 ${ids.length} 条成绩记录吗？此操作不可恢复！`,
+      '批量删除确认',
+      {
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+
+    for (const id of ids) {
+      await deleteResult(id)
+    }
+
+    ElMessage.success('批量删除成功')
+    await fetchResults()
+  } catch (error) {
+    console.error('批量删除失败:', error)
+    ElMessage.error('批量删除失败')
   }
 }
 

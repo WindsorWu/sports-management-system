@@ -134,7 +134,7 @@ class ResultViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve']:
             # 列表和详情允许任何人访问（但只能看到已公开的）
             permission_classes = [AllowAny]
-        elif self.action in ['create', 'update', 'partial_update', 'destroy', 'publish', 'export', 'pending_results_count', 'import_results']:
+        elif self.action in ['create', 'update', 'partial_update', 'destroy', 'publish', 'export', 'pending_results_count', 'import_results', 'bulk_publish', 'bulk_delete']:
             # 创建、更新、删除、公开、导出需要管理员或裁判权限
             permission_classes = [IsAdminOrReferee]
         else:
@@ -311,6 +311,33 @@ class ResultViewSet(viewsets.ModelViewSet):
             return Response({'count': 0})
         count = self.get_pending_results_count(event_ids)
         return Response({'count': count})
+
+    @action(detail=False, methods=['post'])
+    def bulk_publish(self, request):
+        """批量公开成绩"""
+        ids = request.data.get('ids') or []
+        if not isinstance(ids, list) or not ids:
+            return Response({'error': '请提供要公开的成绩ID列表'}, status=status.HTTP_400_BAD_REQUEST)
+        queryset = Result.objects.filter(id__in=ids)
+        queryset = self.apply_referee_filter(queryset, request.user)
+        if not queryset.exists():
+            return Response({'error': '没有可以公开的数据'}, status=status.HTTP_400_BAD_REQUEST)
+        updated = queryset.update(is_published=True)
+        return Response({'message': f'成功公开{updated}条成绩', 'updated': updated})
+
+    @action(detail=False, methods=['post'])
+    def bulk_delete(self, request):
+        """批量删除成绩"""
+        ids = request.data.get('ids') or []
+        if not isinstance(ids, list) or not ids:
+            return Response({'error': '请提供要删除的成绩ID列表'}, status=status.HTTP_400_BAD_REQUEST)
+        queryset = Result.objects.filter(id__in=ids)
+        queryset = self.apply_referee_filter(queryset, request.user)
+        if not queryset.exists():
+            return Response({'error': '没有可以删除的数据'}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            deleted, _ = queryset.delete()
+        return Response({'message': f'成功删除{deleted}条成绩', 'deleted': deleted})
 
     @action(detail=False, methods=['post'], url_path='import')
     def import_results(self, request):

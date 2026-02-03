@@ -116,3 +116,19 @@ export function getPendingResultsCount() {
     method: 'get'
   })
 }
+
+export function bulkPublishResults(ids) {
+  return request({
+    url: '/results/bulk_publish/',
+    method: 'post',
+    data: { ids }
+  })
+}
+
+export function bulkDeleteResults(ids) {
+  return request({
+    url: '/results/bulk_delete/',
+    method: 'post',
+    data: { ids }
+  })
+}
