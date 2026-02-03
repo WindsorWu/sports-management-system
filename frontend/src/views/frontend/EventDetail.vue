@@ -110,27 +110,23 @@
         <div class="description-content" v-html="event.description"></div>
       </el-card>
 
-      <!-- 已报名用户列表 -->
-      <el-card class="registrations-card">
+      <el-card class="contact-card">
         <template #header>
           <div class="card-header">
             <el-icon><UserFilled /></el-icon>
-            <span>已报名用户（{{ registrations.length }}）</span>
+            <span>赛事联系人</span>
           </div>
         </template>
-        <div v-if="registrations.length > 0" class="registrations-list">
-          <el-avatar-group :max="20">
-            <el-avatar
-              v-for="reg in registrations"
-              :key="reg.id"
-              :src="reg.user.avatar"
-              size="large"
-            >
-              {{ reg.user.username?.charAt(0) || 'U' }}
-            </el-avatar>
-          </el-avatar-group>
+        <div class="contact-content">
+          <div class="contact-row">
+            <span class="label">联系人</span>
+            <span class="value">{{ event.contact_person || '暂无' }}</span>
+          </div>
+          <div class="contact-row">
+            <span class="label">联系电话</span>
+            <span class="value">{{ event.contact_phone || '暂无' }}</span>
+          </div>
         </div>
-        <el-empty v-else description="暂无报名用户" />
       </el-card>
 
       <!-- 评论区 -->
@@ -283,7 +279,7 @@ import {
   ChatDotRound
 } from '@element-plus/icons-vue'
 import { getEventDetail, clickEvent } from '@/api/event'
-import { createRegistration, getRegistrationList } from '@/api/registration'
+import { createRegistration } from '@/api/registration'
 import { like, unlike, favorite, unfavorite, getCommentList, createComment } from '@/api/interaction'
 import { formatDate } from '@/utils'
 
@@ -302,7 +298,6 @@ const currentUser = computed(() => store.getters['user/userInfo'])
 // 报名相关
 const isRegistered = ref(false)
 const registerLoading = ref(false)
-const registrations = ref([])
 const registerDialogVisible = ref(false)
 const registerFormRef = ref(null)
 const registerForm = ref({
@@ -374,9 +369,6 @@ const fetchEventDetail = async () => {
     if (isLogin.value) {
       checkUserStatus(data)
     }
-
-    // 获取报名列表
-    fetchRegistrations(id)
   } catch (error) {
     console.error('获取赛事详情失败:', error)
     ElMessage.error('获取赛事详情失败')
@@ -390,16 +382,6 @@ const checkUserStatus = (eventData) => {
   isLiked.value = eventData.is_liked || false
   isFavorited.value = eventData.is_favorited || false
   isRegistered.value = eventData.is_registered || false
-}
-
-// 获取报名列表
-const fetchRegistrations = async (eventId) => {
-  try {
-    const data = await getRegistrationList({ event: eventId, status: 'approved' })
-    registrations.value = data.results || []
-  } catch (error) {
-    console.error('获取报名列表失败:', error)
-  }
 }
 
 // 获取评论列表
@@ -516,9 +498,6 @@ const submitRegistration = async () => {
     ElMessage.success('报名成功，等待管理员审核')
     isRegistered.value = true
     registerDialogVisible.value = false
-
-    // 刷新报名列表
-    fetchRegistrations(event.value.id)
 
     // 重置表单
     registerFormRef.value.resetFields()
@@ -767,14 +746,33 @@ onMounted(() => {
   white-space: pre-wrap;
 }
 
-/* 报名用户列表 */
-.registrations-card {
+
+/* 联系人信息 */
+.contact-card {
   margin-bottom: 20px;
 }
 
-.registrations-list {
-  padding: 10px 0;
+.contact-content {
+  padding: 16px;
+  font-size: 15px;
+  color: #606266;
 }
+
+.contact-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.contact-row .label {
+  font-weight: 500;
+  color: #303133;
+}
+
+.contact-row .value {
+  color: #606266;
+}
+
 
 /* 评论区 */
 .comments-card {
