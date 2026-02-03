@@ -175,7 +175,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
     # 分页
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'utils.pagination.CustomPageNumberPagination',
     'PAGE_SIZE': 10,
     # 过滤、搜索、排序
     'DEFAULT_FILTER_BACKENDS': [
