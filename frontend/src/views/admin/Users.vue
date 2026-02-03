@@ -73,13 +73,21 @@
         </el-table-column>
         <el-table-column label="状态" width="120">
           <template #default="{ row }">
-            <el-switch
-              v-model="row.is_active"
-              @change="handleStatusChange(row)"
-              :disabled="row.is_superuser || switchLoading[row.id]"
-              active-text="启用"
-              inactive-text="禁用"
-            />
+            <div class="status-column">
+              <el-tag :type="row.is_active ? 'success' : 'danger'" class="status-chip">
+                {{ row.is_active ? '启用中' : '已禁用' }}
+              </el-tag>
+              <el-switch
+                v-model="row.is_active"
+                @change="handleStatusChange(row)"
+                :disabled="row.is_superuser || switchLoading[row.id]"
+                active-color="#67C23A"
+                inactive-color="#F56C6C"
+                active-text=""
+                inactive-text=""
+                class="status-switch"
+              />
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="注册时间" width="180">
@@ -451,6 +459,26 @@ onMounted(() => {
 
 .edit-form {
   margin-top: 10px;
+}
+
+.status-column {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.status-chip {
+  font-weight: 600;
+  border-radius: 12px;
+  padding: 0 12px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+}
+
+.status-switch {
+  min-width: 72px;
 }
 
 @media (max-width: 768px) {
