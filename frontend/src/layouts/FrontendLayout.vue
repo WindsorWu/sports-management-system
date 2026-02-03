@@ -6,7 +6,7 @@
         <div class="header-content">
           <div class="logo" @click="$router.push('/')">
             <el-icon :size="28"><Trophy /></el-icon>
-            <span>体育赛事管理系统</span>
+            <span>运动赛事管理与报名系统</span>
           </div>
           <el-menu
             :default-active="activeMenu"
@@ -64,8 +64,8 @@
       <!-- 底部 -->
       <el-footer class="footer">
         <div class="footer-content">
-          <p>&copy; 2024 体育赛事管理系统. All rights reserved.</p>
-          <p>联系我们: support@sports.com | 电话: 400-xxx-xxxx</p>
+          <p>Copyright &copy; 2026 运动赛事管理与报名系统. All rights reserved to <a href="https://github.com/WindsorWu" target="_blank" rel="noopener" style="color: grey;text-decoration: none;">WindsorWu</a>.</p>
+          <p>联系我们: support@sports.com | 电话: 400-000-0000</p>
         </div>
       </el-footer>
     </el-container>

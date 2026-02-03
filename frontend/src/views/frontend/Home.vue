@@ -135,7 +135,7 @@
           </div>
         </template>
         <div class="intro-content">
-          <h3>体育赛事管理系统</h3>
+          <h3>运动赛事管理与报名系统</h3>
           <p>
             本系统是一个功能完善的体育赛事管理平台，提供赛事发布、在线报名、成绩管理、公告通知等功能。
             用户可以方便地浏览和报名参加各类体育赛事，管理员可以高效地管理赛事信息和参赛人员。
@@ -469,6 +469,9 @@ onMounted(() => {
 }
 
 .feature-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
   padding: 20px 0;
 }
