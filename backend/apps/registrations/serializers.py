@@ -140,3 +140,10 @@ class RegistrationCreateSerializer(serializers.ModelSerializer):
 class RegistrationReviewSerializer(serializers.Serializer):
     """报名审核序列化器"""
     review_remarks = serializers.CharField(required=False, allow_blank=True)
+
+
+class RegistrationBulkReviewSerializer(serializers.Serializer):
+    """批量审核序列化器"""
+    ids = serializers.ListField(child=serializers.IntegerField(), min_length=1)
+    review_remarks = serializers.CharField(required=False, allow_blank=True)
+

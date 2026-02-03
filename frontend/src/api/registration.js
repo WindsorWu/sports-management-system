@@ -86,6 +86,17 @@ export function rejectRegistration(id, review_remarks) {
 }
 
 /**
+ * 批量通过报名审核
+ */
+export function bulkApproveRegistrations(data) {
+  return request({
+    url: '/registrations/bulk_approve/',
+    method: 'post',
+    data
+  })
+}
+
+/**
  * 导出报名数据（管理员）
  */
 export function exportRegistrations(params) {

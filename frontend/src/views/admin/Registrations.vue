@@ -8,6 +8,16 @@
             <el-button type="primary" icon="Refresh" @click="fetchRegistrations" :loading="loading">
               刷新
             </el-button>
+            <el-button
+              type="success"
+              icon="CircleCheck"
+              @click="handleBulkApprove"
+              :loading="bulkApproving"
+              :disabled="!hasPendingSelection"
+              style="margin-left: 10px;"
+            >
+              批量通过
+            </el-button>
             <el-button type="success" icon="Download" @click="handleExport" :loading="exporting" :disabled="!eventFilter">
               导出Excel
             </el-button>
@@ -71,7 +81,10 @@
         v-loading="loading"
         stripe
         style="width: 100%; margin-top: 20px;"
+        @selection-change="handleSelectionChange"
+        row-key="id"
       >
+        <el-table-column type="selection" width="55" :selectable="row => row.status === 'pending'" />
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="registration_number" label="报名编号" width="200" show-overflow-tooltip />
         <el-table-column label="赛事名称" min-width="180" show-overflow-tooltip>
@@ -248,11 +261,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
-import { getRegistrationList, getRegistrationDetail, approveRegistration, rejectRegistration, exportRegistrations } from '@/api/registration'
+import { getRegistrationList, getRegistrationDetail, approveRegistration, rejectRegistration, bulkApproveRegistrations, exportRegistrations } from '@/api/registration'
 import { getEventList } from '@/api/event'
 
 const route = useRoute()
@@ -282,7 +295,11 @@ const exporting = ref(false)
 // 赛事列表
 const eventList = ref([])
 
-// 获取报名列表
+// 批量审核
+const bulkApproving = ref(false)
+const selectedRegistrations = ref([])
+const hasPendingSelection = computed(() => selectedRegistrations.value.some((row) => row.status === 'pending'))
+
 const fetchRegistrations = async () => {
   loading.value = true
   try {
@@ -306,8 +323,8 @@ const fetchRegistrations = async () => {
     const response = await getRegistrationList(params)
     registrations.value = response.results || []
     total.value = response.count || 0
+    selectedRegistrations.value = []
 
-    // 获取待审核数量
     if (!statusFilter.value || statusFilter.value === 'pending') {
       const pendingResponse = await getRegistrationList({ status: 'pending', page_size: 1 })
       pendingCount.value = pendingResponse.count || 0
@@ -320,7 +337,6 @@ const fetchRegistrations = async () => {
   }
 }
 
-// 获取赛事列表
 const fetchEvents = async () => {
   try {
     const response = await getEventList({ page_size: 1000 })
@@ -333,26 +349,22 @@ const fetchEvents = async () => {
   }
 }
 
-// 搜索处理
 const handleSearch = () => {
   currentPage.value = 1
   fetchRegistrations()
 }
 
-// 分页大小变化
 const handleSizeChange = (newSize) => {
   pageSize.value = newSize
   currentPage.value = 1
   fetchRegistrations()
 }
 
-// 页码变化
 const handlePageChange = (newPage) => {
   currentPage.value = newPage
   fetchRegistrations()
 }
 
-// 查看详情
 const handleViewDetail = async (registration) => {
   try {
     const response = await getRegistrationDetail(registration.id)
@@ -364,7 +376,6 @@ const handleViewDetail = async (registration) => {
   }
 }
 
-// 审核通过
 const handleApprove = async (row) => {
   try {
     const { value: review_remarks } = await ElMessageBox.prompt('请输入审核备注（可选）', '通过审核', {
@@ -377,7 +388,6 @@ const handleApprove = async (row) => {
     await approveRegistration(row.id, review_remarks || '')
     ElMessage.success('审核通过')
 
-    // 关闭详情对话框（如果打开）
     if (detailDialogVisible.value) {
       detailDialogVisible.value = false
     }
@@ -393,7 +403,6 @@ const handleApprove = async (row) => {
   }
 }
 
-// 审核拒绝
 const handleReject = async (row) => {
   try {
     const { value: review_remarks } = await ElMessageBox.prompt('请输入拒绝原因', '拒绝审核', {
@@ -408,7 +417,6 @@ const handleReject = async (row) => {
     await rejectRegistration(row.id, review_remarks)
     ElMessage.success('已拒绝')
 
-    // 关闭详情对话框（如果打开）
     if (detailDialogVisible.value) {
       detailDialogVisible.value = false
     }
@@ -424,7 +432,6 @@ const handleReject = async (row) => {
   }
 }
 
-// 导出Excel
 const handleExport = async () => {
   if (!eventFilter.value) {
     ElMessage.warning('请先选择一个赛事再导出')
@@ -445,21 +452,15 @@ const handleExport = async () => {
     params.event = eventFilter.value
 
     const response = await exportRegistrations(params)
-
-    // 创建下载链接
     const url = window.URL.createObjectURL(new Blob([response]))
     const link = document.createElement('a')
     link.href = url
-
-    // 使用默认文件名
     let fileName = '报名数据.xlsx'
-
     link.setAttribute('download', fileName)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
-
     ElMessage.success('导出成功')
   } catch (error) {
     console.error('导出失败:', error)
@@ -469,7 +470,45 @@ const handleExport = async () => {
   }
 }
 
-// 格式化日期时间
+const handleBulkApprove = async () => {
+  const pendingRows = selectedRegistrations.value.filter((row) => row.status === 'pending')
+  if (!pendingRows.length) {
+    ElMessage.warning('请先选择待审核的报名记录')
+    return
+  }
+
+  try {
+    const { value: review_remarks } = await ElMessageBox.prompt('请输入审核备注（可选）', '批量通过审核', {
+      confirmButtonText: '确认',
+      cancelButtonText: '取消',
+      inputType: 'textarea'
+    })
+
+    bulkApproving.value = true
+    await bulkApproveRegistrations({
+      ids: pendingRows.map((row) => row.id),
+      review_remarks: review_remarks || ''
+    })
+    ElMessage.success('批量通过审核成功')
+    selectedRegistrations.value = []
+    if (detailDialogVisible.value) {
+      detailDialogVisible.value = false
+    }
+    await fetchRegistrations()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量通过审核失败:', error)
+      ElMessage.error(error.response?.data?.error || '批量通过审核失败')
+    }
+  } finally {
+    bulkApproving.value = false
+  }
+}
+
+const handleSelectionChange = (selection) => {
+  selectedRegistrations.value = selection
+}
+
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '-'
   const date = new Date(dateStr)
@@ -483,7 +522,6 @@ const formatDateTime = (dateStr) => {
 }
 
 onMounted(() => {
-  // 从URL参数读取状态筛选
   if (route.query.status) {
     statusFilter.value = route.query.status
   }

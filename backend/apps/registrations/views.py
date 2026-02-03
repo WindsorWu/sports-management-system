@@ -13,7 +13,8 @@ from .models import Registration
 from .serializers import (
     RegistrationSerializer,
     RegistrationCreateSerializer,
-    RegistrationReviewSerializer
+    RegistrationReviewSerializer,
+    RegistrationBulkReviewSerializer
 )
 from utils.permissions import IsAdmin, IsAdminOrReferee, IsOwnerOrAdmin
 from utils.export import export_registrations
@@ -44,7 +45,7 @@ class RegistrationViewSet(viewsets.ModelViewSet):
         elif self.action in ['update', 'partial_update', 'destroy']:
             # 更新和删除需要是所有者或管理员
             permission_classes = [IsOwnerOrAdmin]
-        elif self.action in ['approve', 'reject', 'export']:
+        elif self.action in ['approve', 'reject', 'export', 'bulk_approve']:
             # 审核和导出需要管理员或裁判权限
             permission_classes = [IsAdminOrReferee]
         else:
@@ -210,3 +211,30 @@ class RegistrationViewSet(viewsets.ModelViewSet):
         registrations = self.queryset.filter(user=request.user)
         serializer = RegistrationSerializer(registrations, many=True)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['post'])
+    def bulk_approve(self, request):
+        """批量通过审核"""
+        serializer = RegistrationBulkReviewSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        ids = serializer.validated_data['ids']
+        review_remarks = serializer.validated_data.get('review_remarks', '')
+        queryset = self.get_queryset().filter(id__in=ids, status='pending')
+        if not queryset.exists():
+            return Response({'error': '未找到任何待审核的报名'}, status=status.HTTP_400_BAD_REQUEST)
+
+        now = timezone.now()
+        approved_ids = []
+        for registration in queryset:
+            registration.status = 'approved'
+            registration.review_remarks = review_remarks
+            registration.reviewed_by = request.user
+            registration.reviewed_at = now
+            registration.save(update_fields=['status', 'review_remarks', 'reviewed_by', 'reviewed_at'])
+            approved_ids.append(registration.id)
+
+        return Response({
+            'message': f'成功通过 {len(approved_ids)} 条报名',
+            'approved_ids': approved_ids
+        })
