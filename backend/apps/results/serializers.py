@@ -111,3 +111,4 @@ class ResultListSerializer(serializers.ModelSerializer):
             'round_type', 'score', 'rank', 'award', 'score_unit',
             'is_published', 'created_at'
         ]
+

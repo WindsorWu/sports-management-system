@@ -1,6 +1,7 @@
 """
 成绩应用视图
 """
+import re
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -9,13 +10,107 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Case, When, IntegerField
 from rest_framework.exceptions import PermissionDenied
+from openpyxl import load_workbook
+from django.db import transaction
 
 from .models import Result
 from .serializers import ResultSerializer, ResultCreateSerializer, ResultListSerializer
 from utils.permissions import IsAdmin, IsAdminOrReferee
 from utils.export import export_results
-from apps.events.models import RefereeEventAccess
+from apps.events.models import RefereeEventAccess, Event
 from apps.registrations.models import Registration
+
+
+HEADER_ALIASES = {
+    'event': {alias.lower() for alias in {
+        '赛事名称', '赛事', '比赛名称', 'event name', 'event', 'match name'
+    }},
+    'participant': {alias.lower() for alias in {
+        '参赛者', '选手', '运动员', 'participant', 'athlete', '选手姓名', 'name'
+    }},
+    'round': {alias.lower() for alias in {
+        '轮次', 'round', 'round type', '阶段', '赛次'
+    }},
+    'score': {alias.lower() for alias in {
+        '成绩', 'score', 'result'
+    }},
+    'rank': {alias.lower() for alias in {
+        '排名', 'rank', 'position'
+    }}
+}
+
+ROUND_TYPE_KEYWORDS = [
+    ('semifinal', ['半决赛', 'semifinal']),
+    ('final', ['决赛', 'final']),
+    ('preliminary', ['预赛', '初赛', 'preliminary'])
+]
+
+
+def build_column_mapping(header_row):
+    mapping = {}
+    for idx, header in enumerate(header_row or []):
+        normalized = (header or '').strip().lower()
+        for field, aliases in HEADER_ALIASES.items():
+            if normalized in aliases:
+                mapping[field] = idx
+                break
+    missing = [field for field in HEADER_ALIASES if field not in mapping]
+    return mapping, missing
+
+
+def safe_str(value):
+    if value is None:
+        return ''
+    return str(value).strip()
+
+
+def normalize_round_type(value):
+    if value is None:
+        return None
+    text = str(value).strip().lower()
+    for target, keywords in ROUND_TYPE_KEYWORDS:
+        for keyword in keywords:
+            if keyword in text:
+                return target
+    return None
+
+
+def build_candidate_names(raw_value):
+    if raw_value in (None, ''):
+        return []
+    text = str(raw_value).strip()
+    if not text:
+        return []
+    names = [text]
+    for match in re.findall(r"\(([^)]+)\)", text):
+        candidate = match.strip()
+        if candidate and candidate not in names:
+            names.append(candidate)
+    return names
+
+
+def _match_registration(queryset, field, candidate):
+    if not candidate:
+        return None, None
+    matches = queryset.filter(**{f"{field}__iexact": candidate})
+    count = matches.count()
+    if count == 1:
+        return matches.first(), None
+    if count > 1:
+        return None, f'参赛者"{candidate}"匹配到多条报名记录，请确保唯一'
+    return None, None
+
+
+def find_registration_for_participant(event, candidates):
+    approved = Registration.objects.filter(event=event, status='approved').select_related('user')
+    for candidate in candidates:
+        for field in ['participant_name', 'user__real_name', 'user__username']:
+            registration, error = _match_registration(approved, field, candidate)
+            if error:
+                return None, error
+            if registration:
+                return registration, None
+    return None, '找不到与参赛者匹配的报名记录，请确认姓名或用户名'
 
 
 class ResultViewSet(viewsets.ModelViewSet):
@@ -39,7 +134,7 @@ class ResultViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve']:
             # 列表和详情允许任何人访问（但只能看到已公开的）
             permission_classes = [AllowAny]
-        elif self.action in ['create', 'update', 'partial_update', 'destroy', 'publish', 'export', 'pending_results_count']:
+        elif self.action in ['create', 'update', 'partial_update', 'destroy', 'publish', 'export', 'pending_results_count', 'import_results']:
             # 创建、更新、删除、公开、导出需要管理员或裁判权限
             permission_classes = [IsAdminOrReferee]
         else:
@@ -216,3 +311,113 @@ class ResultViewSet(viewsets.ModelViewSet):
             return Response({'count': 0})
         count = self.get_pending_results_count(event_ids)
         return Response({'count': count})
+
+    @action(detail=False, methods=['post'], url_path='import')
+    def import_results(self, request):
+        """通过上传的 Excel 批量导入成绩"""
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
+            return Response({'error': '未提供文件'}, status=status.HTTP_400_BAD_REQUEST)
+        if not uploaded_file.name.lower().endswith('.xlsx'):
+            return Response({'error': '仅支持 .xlsx 文件'}, status=status.HTTP_400_BAD_REQUEST)
+        context_event_id = request.data.get('context_event')
+        try:
+            context_event_id = int(context_event_id) if context_event_id else None
+        except (TypeError, ValueError):
+            context_event_id = None
+        try:
+            uploaded_file.seek(0)
+            workbook = load_workbook(uploaded_file, read_only=True, data_only=True)
+        except Exception as exc:
+            return Response({'error': '无法读取 Excel 文件', 'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        sheet = workbook.active
+        header_row = next(sheet.iter_rows(min_row=1, max_row=1, values_only=True), None)
+        column_mapping, missing = build_column_mapping(header_row)
+        if missing:
+            workbook.close()
+            return Response({'error': f'缺少必要字段: {", ".join(missing)}'}, status=status.HTTP_400_BAD_REQUEST)
+        if sheet.max_row <= 1:
+            workbook.close()
+            return Response({'error': 'Excel 文件没有数据行'}, status=status.HTTP_400_BAD_REQUEST)
+        errors = []
+        imported = 0
+        event_cache = {}
+        try:
+            with transaction.atomic():
+                for row_index, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+                    if not any(cell is not None for cell in row):
+                        continue
+                    def get_cell(field):
+                        idx = column_mapping.get(field)
+                        if idx is None or idx >= len(row):
+                            return None
+                        return row[idx]
+                    event_text = safe_str(get_cell('event'))
+                    if not event_text:
+                        errors.append({'row': row_index, 'detail': '赛事名称为空'})
+                        continue
+                    cache_key = event_text.lower()
+                    event = event_cache.get(cache_key)
+                    if event is None:
+                        event = Event.objects.filter(title__iexact=event_text).first()
+                        if not event:
+                            errors.append({'row': row_index, 'detail': f'找不到赛事: {event_text}'})
+                            continue
+                        event_cache[cache_key] = event
+                    if context_event_id and event.id != context_event_id:
+                        errors.append({'row': row_index, 'detail': f'行中的赛事与当前筛选赛事不一致 ({event.title})'})
+                        continue
+                    participant_text = safe_str(get_cell('participant'))
+                    candidates = build_candidate_names(participant_text)
+                    if not candidates:
+                        errors.append({'row': row_index, 'detail': '参赛者信息为空'})
+                        continue
+                    registration, reg_error = find_registration_for_participant(event, candidates)
+                    if reg_error:
+                        errors.append({'row': row_index, 'detail': reg_error})
+                        continue
+                    if not registration:
+                        errors.append({'row': row_index, 'detail': '未找到匹配的报名记录'})
+                        continue
+                    round_value = get_cell('round')
+                    normalized_round = normalize_round_type(round_value)
+                    if not normalized_round:
+                        errors.append({'row': row_index, 'detail': '轮次无法识别'})
+                        continue
+                    score_text = safe_str(get_cell('score'))
+                    if not score_text:
+                        errors.append({'row': row_index, 'detail': '成绩为空'})
+                        continue
+                    rank_value = None
+                    rank_cell = get_cell('rank')
+                    if rank_cell not in (None, ''):
+                        try:
+                            rank_value = int(float(rank_cell))
+                        except (ValueError, TypeError):
+                            errors.append({'row': row_index, 'detail': '排名需要为数字'})
+                            continue
+                    if Result.objects.filter(event=event, registration=registration, round_type=normalized_round).exists():
+                        errors.append({'row': row_index, 'detail': '该参赛者在当前轮次已有成绩'})
+                        continue
+                    serializer = ResultCreateSerializer(
+                        data={
+                            'event': event.id,
+                            'registration': registration.id,
+                            'round_type': normalized_round,
+                            'score': score_text,
+                            'rank': rank_value
+                        },
+                        context={'request': request}
+                    )
+                    if not serializer.is_valid():
+                        detail = '; '.join(f"{k}: {v[0]}" for k, v in serializer.errors.items())
+                        errors.append({'row': row_index, 'detail': detail})
+                        continue
+                    serializer.save()
+                    imported += 1
+        finally:
+            workbook.close()
+        if imported == 0:
+            return Response({'error': '未导入任何成绩', 'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
+        status_code = status.HTTP_201_CREATED if not errors else status.HTTP_200_OK
+        return Response({'message': f'已成功导入{imported}条成绩', 'imported': imported, 'errors': errors}, status=status_code)

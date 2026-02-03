@@ -77,11 +77,11 @@ export function deleteResult(id) {
 /**
  * 批量导入成绩（管理员）
  */
-export function importResults(data) {
+export function importResults(formData) {
   return request({
     url: '/results/import/',
     method: 'post',
-    data
+    data: formData
   })
 }
 

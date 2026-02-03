@@ -8,6 +8,14 @@
             <el-button type="primary" icon="Refresh" @click="fetchResults" :loading="loading">
               刷新
             </el-button>
+            <el-button
+              type="info"
+              icon="Upload"
+              @click="handleImportOpen"
+              :disabled="!eventFilter"
+            >
+              批量导入成绩
+            </el-button>
             <el-button type="success" icon="Plus" @click="handleAdd">
               录入成绩
             </el-button>
@@ -32,7 +40,7 @@
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
-        <el-button type="primary" @click="handleSearch" :loading="loading" :disabled="!eventFilter.value">
+        <el-button type="primary" @click="handleSearch" :loading="loading" :disabled="!eventFilter">
           搜索
         </el-button>
         <el-select
@@ -232,6 +240,51 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 批量导入对话框 -->
+    <el-dialog
+      v-model="importDialogVisible"
+      title="批量导入成绩"
+      width="520px"
+      @close="resetImportDialog"
+    >
+      <div class="import-dialog">
+        <el-upload
+          :auto-upload="false"
+          :file-list="importFileList"
+          :before-upload="handleImportBeforeUpload"
+          :on-change="handleImportChange"
+          :on-remove="handleImportRemove"
+          accept=".xlsx"
+        >
+          <el-button type="primary">选择文件</el-button>
+          <div class="el-upload__tip">仅支持 .xlsx 文件，每次上传一个</div>
+        </el-upload>
+        <el-alert
+          v-if="importSuccessCount"
+          type="info"
+          title="导入完成"
+          :description="`已成功导入 ${importSuccessCount} 条成绩`"
+          show-icon
+        />
+        <el-alert v-if="importResultErrors.length" title="部分行未导入" type="warning" show-icon>
+          <div v-for="error in importResultErrors" :key="`import-error-${error.row}-${error.detail}`" class="import-error-item">
+            第{{ error.row }}行：{{ error.detail }}
+          </div>
+        </el-alert>
+      </div>
+      <template #footer>
+        <el-button @click="importDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          @click="handleImportSubmit"
+          :loading="importLoading"
+          :disabled="importLoading || !hasImportFiles"
+        >
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -239,8 +292,17 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Warning } from '@element-plus/icons-vue'
-import { getResultList, createResult, updateResult, patchResult, deleteResult, publishResult, exportResults } from '@/api/result'
+import { Search, Warning, Upload } from '@element-plus/icons-vue'
+import {
+  getResultList,
+  createResult,
+  updateResult,
+  patchResult,
+  deleteResult,
+  publishResult,
+  exportResults,
+  importResults
+} from '@/api/result'
 import { getEventList, getEventRegistrations } from '@/api/event'
 import { getMyRefereeEvents } from '@/api/referee'
 
@@ -301,6 +363,73 @@ const formRules = {
   rank: [
     { required: true, message: '请输入排名', trigger: 'blur' }
   ]
+}
+
+// 批量导入相关
+const importDialogVisible = ref(false)
+const importLoading = ref(false)
+const importFileList = ref([])
+const importResultErrors = ref([])
+const importSuccessCount = ref(0)
+const hasImportFiles = computed(() => importFileList.value.length > 0)
+
+const handleImportOpen = () => {
+  if (!eventFilter.value) {
+    ElMessage.warning('请先选择一个赛事，再导入成绩')
+    return
+  }
+  resetImportDialog()
+  importDialogVisible.value = true
+}
+
+const handleImportBeforeUpload = (file) => {
+  importFileList.value = [file]
+  return false
+}
+
+const handleImportChange = (file) => {
+  importFileList.value = [file]
+}
+
+const handleImportRemove = () => {
+  importFileList.value = []
+}
+
+const resetImportDialog = () => {
+  importFileList.value = []
+  importResultErrors.value = []
+  importSuccessCount.value = 0
+  importLoading.value = false
+}
+
+const handleImportSubmit = async () => {
+  if (!importFileList.value.length) {
+    ElMessage.warning('请先选择要导入的文件')
+    return
+  }
+  importLoading.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', importFileList.value[0].raw)
+    if (eventFilter.value) {
+      formData.append('context_event', eventFilter.value)
+    }
+    const response = await importResults(formData)
+    importSuccessCount.value = response.imported || 0
+    importResultErrors.value = response.errors || []
+    if (importResultErrors.value.length) {
+      ElMessage.warning('部分行导入失败，请查看详情')
+    } else {
+      ElMessage.success('批量导入完成')
+      importDialogVisible.value = false
+    }
+    await fetchResults()
+  } catch (error) {
+    console.error('批量导入失败:', error)
+    ElMessage.error(error.response?.data?.detail || error.response?.data?.error || '批量导入失败')
+  } finally {
+    importLoading.value = false
+  }
 }
 
 // 获取成绩列表
@@ -613,6 +742,17 @@ onMounted(() => {
   margin-left: 10px;
   display: flex;
   align-items: center;
+}
+
+.import-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.import-error-item {
+  font-size: 12px;
+  color: #f56c6c;
 }
 
 @media (max-width: 768px) {
