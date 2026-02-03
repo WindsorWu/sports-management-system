@@ -8,7 +8,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.exceptions import PermissionDenied
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.db import transaction
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
@@ -23,7 +23,11 @@ class EventViewSet(viewsets.ModelViewSet):
     赛事视图集
     提供赛事的CRUD操作
     """
-    queryset = Event.objects.select_related('organizer').all()
+    queryset = Event.objects.select_related('organizer')\
+        .annotate(approved_registration_count=Count(
+            'registrations', filter=Q(registrations__status='approved')
+        ))\
+        .all()
     serializer_class = EventSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['event_type', 'level', 'is_featured']

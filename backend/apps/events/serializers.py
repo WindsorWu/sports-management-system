@@ -47,7 +47,7 @@ class EventListSerializer(serializers.ModelSerializer):
     event_time = serializers.DateTimeField(source='start_time', read_only=True)
     registration_start_time = serializers.DateTimeField(source='registration_start', read_only=True)
     registration_end_time = serializers.DateTimeField(source='registration_end', read_only=True)
-    registration_count = serializers.IntegerField(source='current_participants', read_only=True)
+    registration_count = serializers.SerializerMethodField()
     click_count = serializers.IntegerField(source='view_count', read_only=True)
 
     class Meta:
@@ -113,11 +113,17 @@ class EventListSerializer(serializers.ModelSerializer):
         """展示用动态状态"""
         return obj.display_status
 
+    def get_registration_count(self, obj):
+        count = getattr(obj, 'approved_registration_count', None)
+        if count is not None:
+            return count
+        return obj.registrations.filter(status='approved').count()
+
 
 class EventDetailSerializer(serializers.ModelSerializer):
     """赛事详情序列化器（完整版）"""
     organizer_info = serializers.SerializerMethodField()
-    registration_count = serializers.IntegerField(source='current_participants', read_only=True)
+    registration_count = serializers.SerializerMethodField()
     can_register = serializers.SerializerMethodField()
     is_registered = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
@@ -216,6 +222,12 @@ class EventDetailSerializer(serializers.ModelSerializer):
     def get_display_status(self, obj):
         """展示用动态状态"""
         return obj.display_status
+
+    def get_registration_count(self, obj):
+        count = getattr(obj, 'approved_registration_count', None)
+        if count is not None:
+            return count
+        return obj.registrations.filter(status='approved').count()
 
 
 class EventAssignmentSerializer(serializers.ModelSerializer):
