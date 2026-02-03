@@ -23,7 +23,7 @@
               icon="CircleClose"
               @click="handleBulkReject"
               :loading="bulkRejecting"
-              :disabled="!hasPendingSelection"
+              :disabled="!hasRejectableSelection"
               style="margin-left: 10px;"
             >
               批量驳回
@@ -164,7 +164,7 @@
               通过
             </el-button>
             <el-button
-              v-if="row.status === 'pending'"
+              v-if="canRejectRow(row)"
               type="danger"
               size="small"
               @click="handleReject(row)"
@@ -320,8 +320,12 @@ const bulkApproving = ref(false)
 const bulkRejecting = ref(false)
 const bulkDeleting = ref(false)
 const selectedRegistrations = ref([])
+const rejectableStatuses = ['pending', 'approved']
 const hasPendingSelection = computed(() => selectedRegistrations.value.some((row) => row.status === 'pending'))
+const selectedRejectableRows = computed(() => selectedRegistrations.value.filter((row) => rejectableStatuses.includes(row.status)))
+const hasRejectableSelection = computed(() => selectedRejectableRows.value.length > 0)
 const hasSelection = computed(() => selectedRegistrations.value.length > 0)
+const canRejectRow = (row) => rejectableStatuses.includes(row.status)
 
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '-'
@@ -541,9 +545,9 @@ const handleBulkApprove = async () => {
 }
 
 const handleBulkReject = async () => {
-  const pendingRows = selectedRegistrations.value.filter((row) => row.status === 'pending')
-  if (!pendingRows.length) {
-    ElMessage.warning('请先选择待审核的报名记录')
+  const rejectableRows = selectedRejectableRows.value
+  if (!rejectableRows.length) {
+    ElMessage.warning('请先选择待审核或已通过的报名记录')
     return
   }
 
@@ -558,7 +562,7 @@ const handleBulkReject = async () => {
 
     bulkRejecting.value = true
     await bulkRejectRegistrations({
-      ids: pendingRows.map((row) => row.id),
+      ids: rejectableRows.map((row) => row.id),
       review_remarks: review_remarks || ''
     })
     ElMessage.success('批量驳回成功')
@@ -585,24 +589,22 @@ const handleBulkDelete = async () => {
   }
 
   try {
-    ElMessageBox.confirm('确认删除选中的报名记录吗？', '批量删除', {
+    await ElMessageBox.confirm('确认删除选中的报名记录吗？', '批量删除', {
       confirmButtonText: '删除',
       cancelButtonText: '取消',
       type: 'warning'
-    }).then(async () => {
-      bulkDeleting.value = true
-      await Promise.all(
-        selectedRows.map((row) => {
-          return rejectRegistration(row.id)
-        })
-      )
-      ElMessage.success('批量删除成功')
-      selectedRegistrations.value = []
-      await fetchRegistrations()
-    }).catch(() => {})
+    })
+
+    bulkDeleting.value = true
+    await bulkDeleteRegistrations({ ids: selectedRows.map((row) => row.id) })
+    ElMessage.success('批量删除成功')
+    selectedRegistrations.value = []
+    await fetchRegistrations()
   } catch (error) {
-    console.error('批量删除失败:', error)
-    ElMessage.error('批量删除失败')
+    if (error !== 'cancel') {
+      console.error('批量删除失败:', error)
+      ElMessage.error(error.response?.data?.error || '批量删除失败')
+    }
   } finally {
     bulkDeleting.value = false
   }

@@ -249,7 +249,7 @@ class RegistrationViewSet(viewsets.ModelViewSet):
 
         ids = serializer.validated_data['ids']
         review_remarks = serializer.validated_data.get('review_remarks', '')
-        queryset = self.get_queryset().filter(id__in=ids, status='pending')
+        queryset = self.get_queryset().filter(id__in=ids, status__in=['pending', 'approved'])
         if not queryset.exists():
             return Response({'error': '未找到任何待审核的报名'}, status=status.HTTP_400_BAD_REQUEST)
 
