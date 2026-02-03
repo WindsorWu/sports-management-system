@@ -2,7 +2,7 @@
   <el-card class="comment-wordcloud-card">
     <template #header>
       <div class="comment-wordcloud-header">
-        <span>实时评论词云（最近7天审核评论）</span>
+        <span>实时评论词云</span>
         <span class="status" :class="statusLevel">{{ statusMessage }}</span>
       </div>
     </template>

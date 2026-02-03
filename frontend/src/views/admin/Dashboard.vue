@@ -83,7 +83,7 @@
         <el-card>
           <template #header>
             <div class="card-header">
-              <span>报名趋势图（最近7天）</span>
+              <span>报名趋势图</span>
             </div>
           </template>
           <div ref="registrationTrendChart" style="height: 300px;"></div>
