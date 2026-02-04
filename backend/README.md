@@ -5,7 +5,7 @@
 ## 环境要求
 - Python 3.8+
 - MySQL 8.0+
-- Redis (用于 Channels/Cache，可选但建议)
+- Redis (用于 Channels/Cache)
 
 ## 核心依赖
 - `Django`: Web 框架核心
@@ -51,6 +51,10 @@
 4. **运行项目**:
    ```bash
    python manage.py runserver
+   ```
+5. **启动词云服务 (WebSocket)**:
+   ```bash
+   daphne sports_backend.asgi:application --port 8090
    ```
 
 ## 开发者文档

@@ -44,7 +44,24 @@
 - `POST /api/interactions/favorites/`: 收藏/取消收藏。
 - `GET /api/interactions/comments/`: 获取评论列表。
 - `POST /api/interactions/comments/`: 发表评论。
-- `GET /api/interactions/comments/wordcloud/`: 获取评论分词云图数据。
+
+## WebSocket 接口
+### 评论词云实时更新
+- **地址**: `ws://<domain>/ws/comments/wordcloud/`
+- **说明**: 
+  - 建立连接后，服务端会立即推送当前的词云数据（前40个高频名词/动词）。
+  - 当有新的评论通过审核或评论被删除时，服务端会自动向所有连接的客户端推送更新后的词云数据。
+- **消息格式**:
+  ```json
+  {
+    "type": "wordcloud_update",
+    "payload": [
+      {"text": "比赛", "weight": 15},
+      {"text": "精彩", "weight": 8},
+      ...
+    ]
+  }
+  ```
 
 ## 轮播图与公告
 - `GET /api/carousels/`: 首页轮播图。
