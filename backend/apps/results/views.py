@@ -1,5 +1,7 @@
 """
 成绩应用视图
+
+提供成绩管理的完整REST API接口，包括成绩录入、查询、导出、批量导入等功能
 """
 import re
 from rest_framework import viewsets, status
@@ -47,6 +49,18 @@ ROUND_TYPE_KEYWORDS = [
 
 
 def build_column_mapping(header_row):
+    """
+    构建Excel列映射关系
+    
+    将Excel表头与系统字段建立映射关系，支持多种表头名称
+    
+    参数:
+        header_row: Excel第一行的表头数据
+        
+    返回:
+        mapping: 字段名到列索引的映射字典
+        missing: 缺失的必填字段列表
+    """
     mapping = {}
     for idx, header in enumerate(header_row or []):
         normalized = (header or '').strip().lower()
@@ -59,12 +73,19 @@ def build_column_mapping(header_row):
 
 
 def safe_str(value):
+    """安全地将值转换为字符串，处理None和空值"""
     if value is None:
         return ''
     return str(value).strip()
 
 
 def normalize_round_type(value):
+    """
+    规范化轮次类型
+    
+    将Excel中的轮次描述转换为系统标准格式
+    支持中英文关键词匹配
+    """
     if value is None:
         return None
     text = str(value).strip().lower()
@@ -76,6 +97,12 @@ def normalize_round_type(value):
 
 
 def build_candidate_names(raw_value):
+    """
+    构建参赛者姓名候选列表
+    
+    从Excel单元格提取可能的姓名，包括括号中的别名
+    例如: "张三(zhangsan)" -> ["张三(zhangsan)", "zhangsan"]
+    """
     if raw_value in (None, ''):
         return []
     text = str(raw_value).strip()
@@ -102,6 +129,20 @@ def _match_registration(queryset, field, candidate):
 
 
 def find_registration_for_participant(event, candidates):
+    """
+    根据候选姓名查找报名记录
+    
+    在赛事的已审核报名中查找匹配的报名记录
+    支持按参赛者姓名、真实姓名、用户名等多种方式匹配
+    
+    参数:
+        event: 赛事对象
+        candidates: 候选姓名列表
+        
+    返回:
+        registration: 匹配的报名记录，未找到返回None
+        error: 错误信息，无错误返回None
+    """
     approved = Registration.objects.filter(event=event, status='approved').select_related('user')
     for candidate in candidates:
         for field in ['participant_name', 'user__real_name', 'user__username']:
@@ -116,7 +157,28 @@ def find_registration_for_participant(event, candidates):
 class ResultViewSet(viewsets.ModelViewSet):
     """
     成绩视图集
-    提供成绩的CRUD操作
+    
+    提供成绩管理的完整CRUD操作和扩展功能
+    
+    主要功能:
+        - 成绩录入: 裁判录入运动员成绩
+        - 成绩查询: 支持多条件筛选和搜索
+        - 成绩公开: 控制成绩的公开状态
+        - 成绩导出: 导出Excel格式的成绩表
+        - 批量导入: 通过Excel批量导入成绩
+        - 排行榜: 获取赛事排行榜
+        
+    权限控制:
+        - 列表/详情: 任何人可访问（但只能看已公开的）
+        - 创建/更新/删除: 需要管理员或裁判权限
+        - 公开/导出/批量操作: 需要管理员或裁判权限
+        - 裁判只能操作被分配的赛事
+        
+    使用场景:
+        - 裁判录入比赛成绩
+        - 生成赛事排行榜
+        - 运动员查看个人成绩
+        - 批量导入成绩数据
     """
     queryset = Result.objects.select_related('event', 'user', 'registration', 'recorded_by').all()
     serializer_class = ResultSerializer
@@ -130,7 +192,15 @@ class ResultViewSet(viewsets.ModelViewSet):
     ordering = ['event', 'rank']
 
     def get_permissions(self):
-        """设置权限"""
+        """
+        根据不同操作动态设置权限
+        
+        权限说明:
+            - list/retrieve: 任何人可访问，但普通用户只能看已公开的
+            - create/update/destroy: 需要管理员或裁判权限
+            - publish/export/bulk_*: 需要管理员或裁判权限
+            - 裁判受到赛事分配限制
+        """
         if self.action in ['list', 'retrieve']:
             # 列表和详情允许任何人访问（但只能看到已公开的）
             permission_classes = [AllowAny]
@@ -151,18 +221,35 @@ class ResultViewSet(viewsets.ModelViewSet):
         return ResultSerializer
 
     def get_referee_event_ids(self, user):
+        """
+        获取裁判被分配的赛事ID列表
+        
+        如果用户不是裁判，返回None（不受限制）
+        """
         if not (user and user.is_authenticated and user.user_type == 'referee'):
             return None
         return list(RefereeEventAccess.objects.filter(referee=user).values_list('event_id', flat=True))
 
     def apply_referee_filter(self, queryset, user):
+        """
+        应用裁判权限过滤
+        
+        限制裁判只能操作被分配的赛事
+        """
         referee_ids = self.get_referee_event_ids(user)
         if referee_ids is None:
             return queryset
         return queryset.filter(event_id__in=referee_ids)
 
     def get_queryset(self):
-        """普通用户只能看到已公开的成绩"""
+        """
+        限制普通用户只能看到已公开的成绩
+        
+        权限规则:
+            - 管理员/组织者: 可以看到所有成绩
+            - 裁判: 只能看到被分配赛事的成绩
+            - 普通用户: 只能看到已公开的成绩
+        """
         user = self.request.user
         if user.is_authenticated and (user.is_superuser or user.user_type in ['admin', 'organizer']):
             return self.queryset
@@ -170,7 +257,15 @@ class ResultViewSet(viewsets.ModelViewSet):
         return self.apply_referee_filter(base, user)
 
     def create(self, request, *args, **kwargs):
-        """创建成绩"""
+        """
+        创建成绩记录
+        
+        业务逻辑:
+            1. 验证裁判是否有权限录入该赛事成绩
+            2. 验证报名记录是否有效
+            3. 自动设置录入人为当前用户
+            4. 自动从报名记录获取用户信息
+        """
         referee_events = self.get_referee_event_ids(request.user)
         event_id = request.data.get('event')
         if referee_events is not None and event_id and int(event_id) not in referee_events:
@@ -247,7 +342,20 @@ class ResultViewSet(viewsets.ModelViewSet):
     def leaderboard(self, request):
         """
         获取排行榜
+        
         GET /api/results/leaderboard/?event={event_id}&round_type={round_type}
+        
+        功能说明:
+            - 获取指定赛事和轮次的前10名成绩
+            - 按排名升序排列
+            - 只返回已公开的成绩
+            
+        参数:
+            - event: 赛事ID（必填）
+            - round_type: 轮次类型（可选，默认为final）
+            
+        返回:
+            前10名的成绩列表
         """
         event_id = request.query_params.get('event')
         round_type = request.query_params.get('round_type', 'final')
@@ -270,7 +378,16 @@ class ResultViewSet(viewsets.ModelViewSet):
     def my_results(self, request):
         """
         获取当前用户的成绩
+        
         GET /api/results/my_results/
+        
+        功能说明:
+            - 获取当前登录用户的所有成绩
+            - 只返回已公开的成绩
+            - 按创建时间倒序排列
+            
+        返回:
+            用户的成绩列表
         """
         if not request.user.is_authenticated:
             return Response({
@@ -287,6 +404,17 @@ class ResultViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def get_pending_results_count(self, event_ids=None):
+        """
+        获取待录入成绩的运动员数量
+        
+        计算已审核通过但尚未录入成绩的报名数量
+        
+        参数:
+            event_ids: 赛事ID列表，用于限制统计范围
+            
+        返回:
+            待录入成绩的数量
+        """
         queryset = Result.objects.select_related('event', 'registration')
         if event_ids:
             queryset = queryset.filter(event_id__in=event_ids)
@@ -300,7 +428,19 @@ class ResultViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def pending_results_count(self, request):
-        """管理员/裁判：获取裁判负责赛事中未录入的运动员数"""
+        """
+        获取待录入成绩数量（仅管理员/裁判）
+        
+        GET /api/results/pending_results_count/
+        
+        功能说明:
+            - 管理员可以看到所有待录入数量
+            - 裁判只能看到自己负责赛事的待录入数量
+            - 用于提醒和统计
+            
+        返回:
+            待录入成绩的数量
+        """
         user = request.user
         if user.is_authenticated and (user.is_superuser or user.user_type in ['admin', 'organizer']):
             count = self.get_pending_results_count()
@@ -314,7 +454,23 @@ class ResultViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def bulk_publish(self, request):
-        """批量公开成绩"""
+        """
+        批量公开成绩
+        
+        POST /api/results/bulk_publish/
+        Body: {ids: [1, 2, 3]}
+        
+        功能说明:
+            - 批量设置成绩为公开状态
+            - 公开后运动员可以看到成绩
+            - 裁判受到赛事分配限制
+            
+        参数:
+            - ids: 要公开的成绩ID列表
+            
+        返回:
+            成功公开的数量
+        """
         ids = request.data.get('ids') or []
         if not isinstance(ids, list) or not ids:
             return Response({'error': '请提供要公开的成绩ID列表'}, status=status.HTTP_400_BAD_REQUEST)
@@ -327,7 +483,26 @@ class ResultViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def bulk_delete(self, request):
-        """批量删除成绩"""
+        """
+        批量删除成绩
+        
+        POST /api/results/bulk_delete/
+        Body: {ids: [1, 2, 3]}
+        
+        功能说明:
+            - 批量删除多条成绩记录
+            - 使用数据库事务确保数据一致性
+            - 裁判受到赛事分配限制
+            
+        参数:
+            - ids: 要删除的成绩ID列表
+            
+        返回:
+            成功删除的数量
+            
+        注意事项:
+            - 删除操作不可恢复
+        """
         ids = request.data.get('ids') or []
         if not isinstance(ids, list) or not ids:
             return Response({'error': '请提供要删除的成绩ID列表'}, status=status.HTTP_400_BAD_REQUEST)
@@ -341,7 +516,38 @@ class ResultViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='import')
     def import_results(self, request):
-        """通过上传的 Excel 批量导入成绩"""
+        """
+        通过Excel批量导入成绩
+        
+        POST /api/results/import/
+        Form-Data: file=成绩表.xlsx, context_event=赛事ID
+        
+        功能说明:
+            - 支持从Excel文件批量导入成绩
+            - 自动匹配参赛者和报名记录
+            - 支持多种表头名称（中英文）
+            - 自动识别轮次类型
+            - 导入失败会返回详细错误信息
+            
+        Excel格式要求:
+            - 必填列: 赛事名称、参赛者、轮次、成绩
+            - 可选列: 排名
+            - 第一行为表头
+            - 支持中英文表头
+            
+        参数:
+            - file: Excel文件（.xlsx格式）
+            - context_event: 当前筛选的赛事ID（可选，用于验证）
+            
+        返回:
+            - imported: 成功导入的数量
+            - errors: 错误信息列表（包含行号和详情）
+            
+        注意事项:
+            - 参赛者必须已有审核通过的报名记录
+            - 同一参赛者在同一轮次不能重复导入
+            - 赛事名称必须完全匹配
+        """
         uploaded_file = request.FILES.get('file')
         if not uploaded_file:
             return Response({'error': '未提供文件'}, status=status.HTTP_400_BAD_REQUEST)
