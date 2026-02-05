@@ -1,12 +1,23 @@
 """
 轮播图应用序列化器
+
+提供轮播图数据的序列化和反序列化功能
 """
 from rest_framework import serializers
 from .models import Carousel
 
 
 class CarouselSerializer(serializers.ModelSerializer):
-    """轮播图序列化器"""
+    """
+    轮播图序列化器
+    
+    用于轮播图数据的完整序列化
+    
+    主要功能:
+        - 序列化轮播图完整信息
+        - 包含创建者和赛事信息
+        - 自动设置创建者
+    """
     creator_name = serializers.CharField(source='creator.real_name', read_only=True)
     event_title = serializers.CharField(source='event.title', read_only=True)
 
@@ -27,7 +38,12 @@ class CarouselSerializer(serializers.ModelSerializer):
 
 
 class CarouselListSerializer(serializers.ModelSerializer):
-    """轮播图列表序列化器（简化版）"""
+    """
+    轮播图列表序列化器（简化版）
+    
+    用于轮播图列表展示
+    只包含展示必要的字段
+    """
     event_title = serializers.CharField(source='event.title', read_only=True)
 
     class Meta:

@@ -1,5 +1,7 @@
 """
 反馈应用视图
+
+提供反馈管理的REST API接口，支持用户反馈和管理员处理
 """
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -22,7 +24,28 @@ from utils.permissions import IsAdmin, IsOwnerOrAdmin
 class FeedbackViewSet(viewsets.ModelViewSet):
     """
     反馈视图集
-    提供反馈的CRUD操作
+    
+    提供反馈管理的CRUD操作和扩展功能
+    
+    主要功能:
+        - 反馈提交: 用户提交各类反馈
+        - 反馈查询: 查看反馈记录
+        - 反馈回复: 管理员回复处理
+        - 状态更新: 跟踪处理进度
+        - 统计信息: 反馈统计数据
+        - 匿名支持: 匿名反馈保护
+        
+    权限控制:
+        - 创建: 需要登录认证
+        - 列表/详情: 管理员看所有，用户只看自己的
+        - 更新/删除: 需要是反馈所有者或管理员
+        - 回复/状态更新: 需要管理员权限
+        
+    使用场景:
+        - 用户报告问题
+        - 用户提出建议
+        - 用户投诉或表扬
+        - 管理员处理反馈
     """
     queryset = Feedback.objects.select_related('user', 'event', 'handler').all()
     serializer_class = FeedbackSerializer
