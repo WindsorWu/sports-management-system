@@ -1,5 +1,7 @@
 """
 轮播图应用视图
+
+提供轮播图管理的REST API接口，支持多位置轮播图展示
 """
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -18,7 +20,27 @@ from utils.permissions import IsAdmin, IsOwnerOrAdmin
 class CarouselViewSet(viewsets.ModelViewSet):
     """
     轮播图视图集
-    提供轮播图的CRUD操作
+    
+    提供轮播图管理的CRUD操作和扩展功能
+    
+    主要功能:
+        - 轮播图创建: 创建不同位置的轮播图
+        - 轮播图查询: 按位置和状态查询
+        - 轮播图排序: 控制展示顺序
+        - 定时展示: 支持定时上下架
+        - 点击统计: 统计轮播图点击次数
+        - 图片上传: 上传轮播图图片
+        
+    权限控制:
+        - 列表/详情: 任何人可访问（但只能看已启用的）
+        - 创建: 需要登录认证
+        - 更新/删除: 需要是创建者或管理员
+        - 启用/禁用: 需要管理员权限
+        
+    使用场景:
+        - 首页轮播图
+        - 赛事推广
+        - 活动宣传
     """
     queryset = Carousel.objects.select_related('creator', 'event').all()
     serializer_class = CarouselSerializer

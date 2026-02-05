@@ -1,5 +1,7 @@
 """
 报名应用视图
+
+提供报名管理的完整REST API接口，包括报名提交、审核、导出等功能
 """
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -26,21 +28,53 @@ from apps.events.models import Event
 class RegistrationViewSet(viewsets.ModelViewSet):
     """
     报名视图集
-    提供报名的CRUD操作
+    
+    提供报名管理的CRUD操作和扩展功能
+    
+    主要功能:
+        - 报名提交: 用户提交报名信息，自动生成报名编号
+        - 报名审核: 管理员/裁判审核报名，支持批量操作
+        - 报名查询: 支持多条件筛选和搜索
+        - 报名导出: 导出Excel格式的报名名单
+        - 报名取消: 用户自主取消报名
+        
+    权限控制:
+        - 创建: 需要登录认证
+        - 查看: 普通用户只能看自己的报名，管理员可看全部
+        - 审核: 需要管理员或裁判权限
+        - 导出: 需要管理员或裁判权限
+        
+    使用场景:
+        - 运动员报名参加赛事
+        - 组织者审核报名申请
+        - 导出报名名单用于赛事安排
     """
     queryset = Registration.objects.select_related('event', 'user', 'reviewed_by').all()
     serializer_class = RegistrationSerializer
+    # 配置过滤、搜索、排序后端
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    # 支持按以下字段精确筛选
     filterset_fields = ['status', 'payment_status', 'event', 'user']
+    # 支持按以下字段模糊搜索
     search_fields = [
         'registration_number', 'participant_name', 'participant_phone',
         'participant_id_card', 'event__title', 'user__username'
     ]
+    # 支持按以下字段排序
     ordering_fields = ['created_at', 'status']
-    ordering = ['-created_at']
+    ordering = ['-created_at']  # 默认按报名时间倒序
 
     def get_permissions(self):
-        """设置权限"""
+        """
+        根据不同操作动态设置权限
+        
+        权限说明:
+            - create: 创建报名需要登录认证
+            - update/destroy: 更新和删除需要是报名所有者或管理员
+            - 审核操作: 需要管理员或裁判权限
+            - export: 导出需要管理员或裁判权限
+            - 其他: 需要登录认证
+        """
         if self.action == 'create':
             # 创建报名需要认证
             permission_classes = [IsAuthenticated]
@@ -216,7 +250,25 @@ class RegistrationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def bulk_approve(self, request):
-        """批量通过审核"""
+        """
+        批量通过审核
+        
+        POST /api/registrations/bulk_approve/
+        Body: {ids: [1, 2, 3], review_remarks: '审核通过'}
+        
+        功能说明:
+            - 批量审核多条待审核报名记录
+            - 只处理状态为pending的报名
+            - 自动记录审核人和审核时间
+            
+        参数:
+            - ids: 要审核的报名ID列表（必填）
+            - review_remarks: 审核备注（可选）
+            
+        返回:
+            - message: 操作结果消息
+            - approved_ids: 成功审核通过的ID列表
+        """
         serializer = RegistrationBulkReviewSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -243,7 +295,26 @@ class RegistrationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def bulk_reject(self, request):
-        """批量驳回报名"""
+        """
+        批量驳回报名
+        
+        POST /api/registrations/bulk_reject/
+        Body: {ids: [1, 2, 3], review_remarks: '不符合条件'}
+        
+        功能说明:
+            - 批量驳回多条报名记录
+            - 可处理pending和approved状态的报名
+            - 驳回后会减少赛事的报名人数
+            - 自动记录审核人和审核时间
+            
+        参数:
+            - ids: 要驳回的报名ID列表（必填）
+            - review_remarks: 驳回理由（可选）
+            
+        返回:
+            - message: 操作结果消息
+            - rejected_ids: 成功驳回的ID列表
+        """
         serializer = RegistrationBulkReviewSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -276,7 +347,29 @@ class RegistrationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def bulk_delete(self, request):
-        """批量删除报名"""
+        """
+        批量删除报名
+        
+        POST /api/registrations/bulk_delete/
+        Body: {ids: [1, 2, 3]}
+        
+        功能说明:
+            - 批量删除多条报名记录
+            - 会同步更新赛事的报名人数
+            - 使用数据库事务确保数据一致性
+            - 只有未取消/未拒绝的报名才会减少人数
+            
+        参数:
+            - ids: 要删除的报名ID列表（必填）
+            
+        返回:
+            - message: 操作结果消息
+            - deleted_ids: 成功删除的ID列表
+            
+        注意事项:
+            - 删除操作不可恢复，请谨慎使用
+            - 需要管理员或裁判权限
+        """
         serializer = RegistrationBulkDeleteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 

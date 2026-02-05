@@ -3,11 +3,38 @@ from django.conf import settings
 
 
 class Carousel(models.Model):
-    """轮播图模型"""
+    """
+    轮播图模型
+    
+    用于管理系统各个页面的轮播图展示
+    
+    主要功能:
+        - 多位置支持: 可在首页、赛事页、公告页等不同位置展示
+        - 排序控制: 通过order字段控制展示顺序
+        - 定时展示: 支持设置开始和结束时间
+        - 点击统计: 记录轮播图点击次数
+        - 链接跳转: 支持点击跳转到指定URL或赛事
+        
+    关键字段说明:
+        - position: 展示位置，决定轮播图显示在哪个页面
+        - order: 排序值，数字越小越靠前
+        - is_active: 是否启用，未启用的不会显示
+        - start_time/end_time: 定时展示的时间范围
+        - link_url: 点击跳转的链接
+        - event: 关联的赛事（可选）
+        
+    使用场景:
+        - 首页轮播图
+        - 赛事推广
+        - 活动宣传
+        
+    数据表名: carousel
+    """
+    # 展示位置选项
     POSITION_CHOICES = (
-        ('home', '首页'),
-        ('event', '赛事页'),
-        ('announcement', '公告页'),
+        ('home', '首页'),           # 首页轮播图
+        ('event', '赛事页'),        # 赛事页面轮播图
+        ('announcement', '公告页'),  # 公告页面轮播图
     )
     
     title = models.CharField(

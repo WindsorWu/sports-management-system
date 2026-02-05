@@ -1,5 +1,7 @@
 """
 互动应用视图（点赞、收藏、评论）
+
+提供用户互动功能的REST API接口，包括点赞、收藏、评论等社交功能
 """
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -26,6 +28,21 @@ logger = logging.getLogger(__name__)
 
 
 def normalize_interaction_payload(data):
+    """
+    规范化互动请求数据
+    
+    将前端传入的target_type和target_id转换为content_type和object_id
+    支持两种参数格式，提高API的灵活性
+    
+    参数:
+        data: 请求数据字典
+        
+    返回:
+        规范化后的数据字典
+        
+    异常:
+        ValidationError: 参数缺失或无效时抛出
+    """
     payload = data.copy()
     target_type = payload.pop('target_type', None)
     target_id = payload.pop('target_id', None)
@@ -54,6 +71,23 @@ def normalize_interaction_payload(data):
 class LikeViewSet(viewsets.ModelViewSet):
     """
     点赞视图集
+    
+    提供点赞功能的CRUD操作
+    
+    主要功能:
+        - 点赞: 为对象点赞
+        - 取消点赞: 取消之前的点赞
+        - 检查点赞状态: 查询是否已点赞
+        - 点赞列表: 查看用户的点赞记录
+        
+    权限控制:
+        - 所有操作都需要登录认证
+        - 用户只能操作自己的点赞
+        
+    使用场景:
+        - 为赛事点赞
+        - 为公告点赞
+        - 为评论点赞
     """
     queryset = Like.objects.select_related('user', 'content_type').all()
     serializer_class = LikeSerializer
@@ -140,6 +174,24 @@ class LikeViewSet(viewsets.ModelViewSet):
 class FavoriteViewSet(viewsets.ModelViewSet):
     """
     收藏视图集
+    
+    提供收藏功能的CRUD操作
+    
+    主要功能:
+        - 收藏: 收藏感兴趣的对象
+        - 取消收藏: 取消之前的收藏
+        - 检查收藏状态: 查询是否已收藏
+        - 收藏列表: 查看用户的收藏记录
+        - 收藏备注: 为收藏添加个人备注
+        
+    权限控制:
+        - 所有操作都需要登录认证
+        - 用户只能操作自己的收藏
+        
+    使用场景:
+        - 收藏感兴趣的赛事
+        - 收藏重要公告
+        - 建立个人收藏夹
     """
     queryset = Favorite.objects.select_related('user', 'content_type').all()
     serializer_class = FavoriteSerializer
@@ -238,6 +290,27 @@ class FavoriteViewSet(viewsets.ModelViewSet):
 class CommentViewSet(viewsets.ModelViewSet):
     """
     评论视图集
+    
+    提供评论功能的CRUD操作
+    
+    主要功能:
+        - 发表评论: 对对象发表评论
+        - 回复评论: 回复其他用户的评论
+        - 评论列表: 查看对象的所有评论
+        - 评论审核: 管理员审核评论
+        - 评论点赞: 为评论点赞
+        - 评论删除: 删除自己的评论
+        
+    权限控制:
+        - 列表/详情: 任何人可访问（但只能看已审核的）
+        - 创建: 需要登录认证
+        - 更新/删除: 需要是评论所有者或管理员
+        - 审核: 需要管理员权限
+        
+    使用场景:
+        - 为赛事评论
+        - 为公告评论
+        - 用户互动交流
     """
     queryset = Comment.objects.select_related('user', 'content_type', 'parent', 'reply_to').prefetch_related('replies').all()
     serializer_class = CommentSerializer
