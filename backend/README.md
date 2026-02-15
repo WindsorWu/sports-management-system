@@ -1,62 +1,61 @@
 # 体育赛事管理系统 - 后端
 
-基于 Django 5.0 和 Django REST Framework 开发的后端 API 接口系统。
+## 概述
+提供基于 Django 5.0 与 Django REST Framework 的 REST API 服务，以及通过 Channels 支持的 WebSocket 词云推送，支撑前端页面、管理后台与大屏交互。
 
 ## 环境要求
 - Python 3.8+
 - MySQL 8.0+
-- Redis (用于 Channels/Cache)
+- Redis（用于 Channels 缓存/通道，在生产环境建议部署）
 
 ## 核心依赖
-- `Django`: Web 框架核心
-- `djangorestframework`: API 开发插件
-- `djangorestframework-simplejwt`: JWT 认证管理
-- `django-cors-headers`: 处理跨域请求
-- `django-filter`: 提供强大的 API 过滤功能
-- `openpyxl`: 处理成绩与报名的 Excel 导出导入
-- `jieba`: 分词处理，用于互动评论的词云分析
-- `channels`: 构建异步通信支持
+- `django`、`djangorestframework`、`channels`
+- `djangorestframework-simplejwt`（认证）
+- `django-filter`（过滤）
+- `openpyxl`（Excel 导入/导出）
+- `jieba`（词云分词）
 
-## 目录结构
-- `apps/`: 存放所有业务应用
-  - `users/`: 用户、角色与权限管理
-  - `events/`: 赛事信息发布、分类与图片管理
-  - `registrations/`: 报名流程、状态审核
-  - `results/`: 成绩登记、排名计算与批量导入
-  - `announcements/`: 公告动态
-  - `interactions/`: 点赞、收藏、评论、词云
-  - `carousel/`: 首页轮播图管理
-  - `feedback/`: 意见反馈
-- `sports_backend/`: 全局配置、主路由、ASGI/WSGI 配置
-- `utils/`: 共通工具
-  - `permissions.py`: 自定义权限类 (IsAdmin, IsReferee 等)
-  - `export.py`: 导出功能封装
-  - `pagination.py`: 分页格式定义
+## 目录结构概览
+- `apps/`: 业务模块（用户、赛事、报名、成绩、互动、轮播、公告、反馈）。
+  - `interactions/` 包含评论模型、词云消费者与信号处理。
+- `sports_backend/`: 项目配置与路由。
+- `utils/`: 权限、分页、导出等公用工具。
 
-## 部署说明
-1. **安装依赖**:
+## 快速启动
+1. 进入 `backend` 目录并安装依赖：
    ```bash
    pip install -r requirements.txt
    ```
-2. **初始化数据库**:
-   创建 MySQL 数据库，并在 `sports_backend/settings.py` 或 `.env` 中配置连接。
+2. 生成迁移并同步数据库：
    ```bash
    python manage.py makemigrations
    python manage.py migrate
    ```
-3. **创建超级管理员**:
+3. 创建管理员账号：
    ```bash
    python manage.py createsuperuser
    ```
-4. **运行项目**:
+4. 启动 Django HTTP 服务：
    ```bash
    python manage.py runserver
    ```
-5. **启动词云服务 (WebSocket)**:
+5. 启动词云 WebSocket 服务：
    ```bash
    daphne sports_backend.asgi:application --port 8090
    ```
+   词云服务通过 `collect_wordcloud_data()` 聚合最近 7 天的 `is_approved=True` 评论，最多保留 400 条、40 个关键词；若数据不足或分词结果为空，前端会继续显示“等待实时词云数据”，但状态仍提示“实时词云更新完成”。
 
-## 开发者文档
-- API 接口列表详见 `API_DOC.md`。
-- 系统权限逻辑基于 `user_type` 字段判定：`admin` (管理员), `referee` (裁判), `organizer` (组织者), `user` (普通用户)。
+## 词云与消息推送
+- `apps.interactions.comment_wordcloud` 会在评论新增、删除或审核状态变化时调度 `broadcast_comment_wordcloud()` 通知 `WORDCLOUD_GROUP`。
+- 消息格式为 `{type: "wordcloud_update", payload: [{text, weight}, ...]}`。
+- 词云数据的来源与前端状态紧密关联：只要后端返回空数组，前端仍会标记连接成功，但词云画布保持占位提示。
+
+## 智能客服（MaxKB）
+- 项目前端通过 MaxKB 实现智能问答与客服，可先通过 Docker 拉起服务：
+  ```bash
+  docker run -d --name maxkb -p 8080:8080 fittentech/maxkb
+  ```
+- 启动后在 MaxKB 后台配置知识库或 Token，再在前端页面中嵌入提供的脚本。
+
+## API 参考
+详见同级文件 `API_DOC.md`，涵盖认证、用户、赛事、报名、成绩、互动、轮播、公告、反馈与词云的详细接口说明。

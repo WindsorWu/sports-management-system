@@ -15,8 +15,8 @@
 </template>
 
 <script setup>
-/* global WordCloud */
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import WordCloud from 'wordcloud'
 
 const wordcloudRef = ref(null)
 const statusMessage = ref('正在连接评论词云')
@@ -45,7 +45,7 @@ const renderWordCloud = (items) => {
   const container = wordcloudRef.value
   if (!container) return
   container.innerHTML = ''
-  if (typeof WordCloud === 'undefined') {
+  if (!WordCloud) {
     errorMessage.value = '词云渲染脚本未加载'
     hasData.value = false
     return

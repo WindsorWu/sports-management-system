@@ -52,8 +52,13 @@
 项目通过在 `public/index.html` (或 `index.html`) 中引入 MaxKB 提供的嵌入式脚本实现智能客服功能。
 - **技术实现**: 使用脚本注入方式加载 MaxKB 聊天应用。
 - **配置**: 如需修改机器人配置或 Token，请在 `index.html` 的 `<script>` 标签中更新 URL。
+- **部署**: 可通过 Docker 拉起 MaxKB（`docker run -d --name maxkb -p 8080:8080 fittentech/maxkb`），部署完成后复制嵌入脚本并粘贴到页面中。
 
 ## 7. 与后端交互
-
 - API 请求基础路径统一配置，使用拦截器处理 401 (未登录) 状态并自动清除失效 Token。
 - 采用 JWT 认证，Headers 格式: `Authorization: Bearer <token>`。
+
+## 8. 实时评论词云
+- 数据来源于 `apps.interactions.comment_wordcloud.collect_wordcloud_data()`，仅统计最近 7 天内已审核评论（最多 400 条）并返回前 40 个关键词。
+- `src/components/admin/CommentWordCloud.vue` 拉取 `ws://<host>:8090/ws/comments/wordcloud/`（可通过 `VITE_API_BASE_URL` 与 `VITE_WEBSOCKET_PORT` 覆盖地址），接收到 `wordcloud_update` 消息即可渲染词云；若 payload 为空，画布仍会显示“等待实时词云数据”，但状态保持“实时词云更新完成”。
+- 触发条件包括评论新增、删除或审核状态变更（由 `broadcast_comment_wordcloud()` 在信号中广播），务必确保 `daphne sports_backend.asgi:application --port 8090` 正常运行且 Channel Layer 配置可用。
