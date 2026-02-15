@@ -352,6 +352,8 @@ const switchLoading = ref({})
 const eventList = ref([])
 const registrationList = ref([])
 const registrationLoading = ref(false)
+const selectedEvent = computed(() => eventList.value.find(event => event.id === eventFilter.value))
+const selectedEventName = computed(() => selectedEvent.value?.name || '成绩')
 
 // 分页
 const currentPage = ref(1)
@@ -777,6 +779,41 @@ const formatDateTime = (dateStr) => {
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+// 导出成绩
+const handleExport = async () => {
+  if (!eventFilter.value) {
+    ElMessage.warning('请先选择一个赛事，再导出成绩')
+    return
+  }
+  try {
+    const params = {
+      event: eventFilter.value
+    }
+    if (searchQuery.value) {
+      params.search = searchQuery.value
+    }
+    if (publishFilter.value !== 'all') {
+      params.is_published = publishFilter.value === 'published'
+    }
+    const fileBlob = await exportResults(params)
+    const blob = fileBlob instanceof Blob
+      ? fileBlob
+      : new Blob([fileBlob], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const link = document.createElement('a')
+    const timestamp = new Date().toISOString().split('T')[0]
+    link.href = URL.createObjectURL(blob)
+    link.download = `${selectedEventName.value}-${timestamp}.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(link.href)
+    ElMessage.success('导出成功，文件将在下载完成后自动保存。')
+  } catch (error) {
+    console.error('导出成绩失败：', error)
+    ElMessage.error(error.response?.data?.detail || '导出失败，请稍后再试')
+  }
 }
 
 onMounted(() => {
