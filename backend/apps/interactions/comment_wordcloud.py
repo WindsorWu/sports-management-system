@@ -1,4 +1,3 @@
-import logging
 import re
 from collections import Counter
 from datetime import timedelta
@@ -9,7 +8,6 @@ from channels.layers import get_channel_layer
 from django.apps import apps
 from django.utils import timezone
 
-logger = logging.getLogger(__name__)
 STOP_WORDS = {
     '的', '是', '在', '我', '有', '就', '这', '那', '们', '和', '与', '及',
     '也', '还', '都', '只', '个', '了', '吗', '呢', '吧', '啊', '哦', '之', '于',
@@ -53,20 +51,13 @@ def extract_tokens(source: str) -> list[str]:
             if next_flag.startswith('n') and next_word not in STOP_WORDS:
                 tokens.append(f"{word}{next_word}")
 
-    if not tokens:
-        logger.info("Jieba segmentation produced no tokens, falling back to manual substring chunks.")
-        # Fallback to manual substring chunks
-        for i in range(0, len(clean_text), 2):
-            chunk = clean_text[i:i + 2]
-            if chunk not in STOP_WORDS:
-                tokens.append(chunk)
-
     return tokens
 
 
 def collect_wordcloud_data() -> list[dict[str, int]]:
     Comment = _get_comment_model()
-    comments = Comment.objects.filter(is_approved=True).order_by('-created_at')[:MAX_COMMENTS]
+    horizon = timezone.now() - timedelta(days=7)
+    comments = Comment.objects.filter(is_approved=True, created_at__gte=horizon).order_by('-created_at')[:MAX_COMMENTS]
     counter = Counter()
 
     for comment in comments:

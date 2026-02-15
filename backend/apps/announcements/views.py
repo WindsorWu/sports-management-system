@@ -1,5 +1,7 @@
 """
 公告应用视图
+
+提供公告管理的完整REST API接口，包括公告发布、查询、置顶、定时发布等功能
 """
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -25,7 +27,28 @@ from utils.permissions import IsAdmin, IsOwnerOrAdmin
 class AnnouncementViewSet(viewsets.ModelViewSet):
     """
     公告视图集
-    提供公告的CRUD操作
+    
+    提供公告管理的完整CRUD操作和扩展功能
+    
+    主要功能:
+        - 公告发布: 创建和发布公告
+        - 公告查询: 支持多条件筛选和搜索
+        - 公告置顶: 设置重要公告置顶显示
+        - 定时发布: 支持定时发布和自动过期
+        - 图片上传: 上传公告封面图片
+        - 浏览统计: 自动统计公告浏览量
+        
+    权限控制:
+        - 列表/详情: 任何人可访问（但只能看已发布且未过期的）
+        - 创建: 需要登录认证
+        - 更新/删除: 需要是创建者或管理员
+        - 发布/置顶/上传: 需要管理员权限
+        
+    使用场景:
+        - 发布系统公告
+        - 发布赛事信息
+        - 发布新闻资讯
+        - 查看公告列表
     """
     queryset = Announcement.objects.select_related('author', 'event').all()
     serializer_class = AnnouncementSerializer
@@ -63,7 +86,13 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
         return AnnouncementSerializer
 
     def get_queryset(self):
-        """普通用户只能看到已发布且未过期的公告"""
+        """
+        限制普通用户只能看到已发布且未过期的公告
+        
+        权限规则:
+            - 管理员/组织者: 可以看到所有公告
+            - 普通用户: 只能看到已发布且未过期的公告
+        """
         user = self.request.user
         now = timezone.now()
 
@@ -78,7 +107,13 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
         )
 
     def retrieve(self, request, *args, **kwargs):
-        """获取公告详情并增加浏览次数"""
+        """
+        获取公告详情并增加浏览次数
+        
+        业务逻辑:
+            - 返回公告完整信息
+            - 自动增加浏览次数统计
+        """
         instance = self.get_object()
         instance.view_count += 1
         instance.save(update_fields=['view_count'])
@@ -184,7 +219,25 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
     def upload_image(self, request):
         """
         上传公告封面图片到前端public目录
+        
         POST /api/announcements/upload_image/
+        Form-Data: file=图片文件
+        
+        功能说明:
+            - 支持jpg、png、gif、webp格式
+            - 文件大小限制5MB
+            - 自动生成唯一文件名
+            - 保存到前端public目录
+            
+        参数:
+            - file: 图片文件
+            
+        返回:
+            - image: 图片的相对路径（用于前端访问）
+            
+        注意事项:
+            - 需要管理员权限
+            - 图片保存在 frontend/public/images/announcements/
         """
         # el-upload 默认使用 'file' 字段名
         if 'file' not in request.FILES and 'image' not in request.FILES:

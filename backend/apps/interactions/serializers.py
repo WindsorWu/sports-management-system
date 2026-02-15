@@ -1,5 +1,7 @@
 """
 互动应用序列化器（点赞、收藏、评论）
+
+提供互动数据的序列化和反序列化功能
 """
 from rest_framework import serializers
 from django.contrib.contenttypes.models import ContentType
@@ -7,7 +9,16 @@ from .models import Like, Favorite, Comment
 
 
 class LikeSerializer(serializers.ModelSerializer):
-    """点赞序列化器"""
+    """
+    点赞序列化器
+    
+    用于点赞数据的序列化
+    
+    主要功能:
+        - 序列化点赞信息
+        - 自动设置点赞用户
+        - 展示被点赞对象的类型
+    """
     user_name = serializers.CharField(source='user.real_name', read_only=True)
     content_type_name = serializers.SerializerMethodField()
 
@@ -27,7 +38,17 @@ class LikeSerializer(serializers.ModelSerializer):
 
 
 class FavoriteSerializer(serializers.ModelSerializer):
-    """收藏序列化器"""
+    """
+    收藏序列化器
+    
+    用于收藏数据的序列化
+    
+    主要功能:
+        - 序列化收藏信息
+        - 自动设置收藏用户
+        - 展示被收藏对象的详细信息
+        - 支持收藏备注
+    """
     user_name = serializers.CharField(source='user.real_name', read_only=True)
     content_type_name = serializers.SerializerMethodField()
     object_id = serializers.IntegerField(write_only=True)
@@ -76,7 +97,17 @@ class FavoriteSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
-    """评论序列化器"""
+    """
+    评论序列化器
+    
+    用于评论数据的完整序列化
+    
+    主要功能:
+        - 序列化评论完整信息
+        - 包含用户头像和昵称
+        - 展示评论的回复列表
+        - 自动设置评论用户
+    """
     user_name = serializers.CharField(source='user.real_name', read_only=True)
     user_avatar = serializers.ImageField(source='user.avatar', read_only=True)
     reply_to_name = serializers.CharField(source='reply_to.real_name', read_only=True)
@@ -128,7 +159,12 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class CommentSimpleSerializer(serializers.ModelSerializer):
-    """评论简单序列化器（用于回复列表，避免递归）"""
+    """
+    评论简单序列化器
+    
+    用于回复列表展示，避免递归序列化
+    不包含replies字段，防止无限嵌套
+    """
     user_name = serializers.CharField(source='user.real_name', read_only=True)
     user_avatar = serializers.ImageField(source='user.avatar', read_only=True)
     reply_to_name = serializers.CharField(source='reply_to.real_name', read_only=True)
@@ -143,7 +179,17 @@ class CommentSimpleSerializer(serializers.ModelSerializer):
 
 
 class CommentCreateSerializer(serializers.ModelSerializer):
-    """评论创建序列化器"""
+    """
+    评论创建序列化器
+    
+    用于创建评论和回复
+    
+    主要功能:
+        - 只包含必要的创建字段
+        - 验证评论关联关系
+        - 验证回复逻辑
+        - 自动设置评论用户
+    """
 
     class Meta:
         model = Comment

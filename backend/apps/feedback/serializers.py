@@ -1,12 +1,24 @@
 """
 反馈应用序列化器
+
+提供反馈数据的序列化和反序列化功能
 """
 from rest_framework import serializers
 from .models import Feedback
 
 
 class FeedbackSerializer(serializers.ModelSerializer):
-    """反馈序列化器"""
+    """
+    反馈序列化器
+    
+    用于反馈数据的完整序列化
+    
+    主要功能:
+        - 序列化反馈完整信息
+        - 包含用户、赛事、处理人信息
+        - 自动设置反馈用户
+        - 匿名反馈保护
+    """
     user_name = serializers.CharField(source='user.real_name', read_only=True)
     user_username = serializers.CharField(source='user.username', read_only=True)
     event_title = serializers.CharField(source='event.title', read_only=True)
@@ -40,7 +52,12 @@ class FeedbackSerializer(serializers.ModelSerializer):
 
 
 class FeedbackCreateSerializer(serializers.ModelSerializer):
-    """反馈创建序列化器（简化版）"""
+    """
+    反馈创建序列化器（简化版）
+    
+    用于用户提交反馈
+    只包含用户需要填写的字段
+    """
 
     class Meta:
         model = Feedback
@@ -56,7 +73,12 @@ class FeedbackCreateSerializer(serializers.ModelSerializer):
 
 
 class FeedbackListSerializer(serializers.ModelSerializer):
-    """反馈列表序列化器（简化版）"""
+    """
+    反馈列表序列化器（简化版）
+    
+    用于反馈列表展示
+    只包含列表必要的字段
+    """
     user_name = serializers.SerializerMethodField()
     event_title = serializers.CharField(source='event.title', read_only=True)
 
@@ -75,7 +97,15 @@ class FeedbackListSerializer(serializers.ModelSerializer):
 
 
 class FeedbackReplySerializer(serializers.Serializer):
-    """反馈回复序列化器"""
+    """
+    反馈回复序列化器
+    
+    用于管理员回复反馈
+    
+    字段说明:
+        - reply: 回复内容（必填）
+        - status: 处理状态（可选，默认为已解决）
+    """
     reply = serializers.CharField(required=True)
     status = serializers.ChoiceField(
         choices=Feedback.STATUS_CHOICES,
